@@ -25,3 +25,4 @@ These choices are recommendations until the spikes confirm them:
 - [Reference review](docs/research/reference-review.md): lumina-reader and the other reader apps reviewed.
 - [Voice tests](docs/research/voice-tests.md): speed measurements from the phone, and how to rerun them.
 - [Site tests](docs/research/site-tests.md): the sites tested, and which ones start enabled.
+- `tools/`: the scripts and raw results behind the voice and site tests.

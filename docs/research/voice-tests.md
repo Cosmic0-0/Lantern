@@ -44,4 +44,33 @@ Compare generation time as well as RTF, because voices read at different paces. 
 
 ## Fast voice samples
 
-To make more, push `sherpa-onnx-v2.0.1-android-aarch64-termux-static` plus Termux's `libc++_shared.so` to `/data/local/tmp`, and run `sherpa-onnx-offline-tts` with `LD_LIBRARY_PATH=.`. Piper and Kitten also need `lexicon-en-us.txt` from the `tts-models` release. Google's Platform Tools aren't installed on the laptop, so download them again. You can also try Kitten and Piper through the [project's demo APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), and Supertonic through the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main).
+These files are in `Music/LanternVoiceTest` on your phone. The texts are in `tools/voice-test/`.
+
+| File | Voice and setting | Text |
+|---|---|---|
+| `1-Supertonic-voice-A.wav` | Supertonic 3 int8, `--sid=5`, 5 steps | `passage.txt` |
+| `2-Supertonic-voice-B.wav` | Supertonic 3 int8, `--sid=0`, 5 steps | `passage.txt` |
+| `3-Supertonic-voice-A-faster-setting.wav` | Supertonic 3 int8, `--sid=5`, 3 steps | `passage.txt` |
+| `4-Kitten.wav` | Kitten nano v0.8 fp32, `--sid=0`, one sentence at a time, joined with `join.mjs` | `sentences.txt` without quotation marks |
+| `5-Piper.wav` | Piper lessac medium | `passage2.txt` without quotation marks |
+| `6-Kokoro-digits-test.wav` | Kokoro fp32, `--sid=3`, English lexicon only, no Chinese rule files | `passage.txt` |
+
+`passage.txt` writes numbers as digits, and the other two texts spell them out. Sample 6 tests whether the Chinese-sounding numbers are gone, and nobody has checked it by ear yet. Piper and Kitten skip the word "her" in their samples, and sample 6 may skip words too, as described in [TTS engine](../decisions/voice-engine.md).
+
+To make more samples:
+
+1. Download `sherpa-onnx-v2.0.1-android-aarch64-termux-static.tar.bz2` from the [v2.0.1 release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/v2.0.1), and the voices and `lexicon-en-us.txt` from the [`tts-models` release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models).
+2. Get `libc++_shared.so` from the `libc++` package at [packages.termux.dev](https://packages.termux.dev/apt/termux-main/pool/main/libc/libc++/).
+3. Push `sherpa-onnx-offline-tts` to `/data/local/tmp/lantern/tts`, with `libc++_shared.so`, `lexicon-en-us.txt`, the texts and `lib.sh` beside it.
+4. Push each voice to the folder that `lib.sh` expects: `kokoro`, `kokoro-int8`, `kitten`, `supertonic`, `pocket` or `piper`.
+5. Run a voice with `adb shell ". /data/local/tmp/lantern/lib.sh; run my-label all 4 \"\$T\" \$KOKORO --sid=3"`. Audio lands in `out/`, and `oov.sh` lists skipped words.
+
+You can also try Kitten and Piper through the [project's demo APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), though the newest Kitten demo I found is the older v0.2, not the v0.8 tested here. Supertonic is also available through the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main).
+
+## Other notes from these tests
+
+- These timings ran through `adb shell`, not inside an app, so an app's speed may differ.
+- Kokoro read the 941-character `passage.txt` in about 44 s, or about 1,300 characters a minute.
+- [VoxSherpa's README](https://github.com/CodeBySonu95/VoxSherpa-TTS) claims 60 to 90 s per minute of audio for Kokoro on mid-range phones, which is RTF 1.0 to 1.5 and fits these results.
+- The phone has 57 GB free and uses 4 KB memory pages. Its chip reports as `s5e8835`.
+- The undamaged demo APK is in the laptop's `Downloads` folder, with SHA-256 `a6654f8b259a713b353f510562b3a84db3744c40593d4cf217de632f99f030e7`. The damaged copy may still be in the phone's `Download` folder, and is safe to delete.

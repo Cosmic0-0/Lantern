@@ -4,6 +4,26 @@ Status: second draft for your approval, updated 2026-11-07 with measurements fro
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
+## Where things stand
+
+Start here when picking this up in a new chat. Last updated 2026-11-07.
+
+The plan, reference review, site tests and phone voice tests are done. No app code exists, and you haven't approved the plan yet, so nothing gets built until you do.
+
+**Next steps, in order:**
+
+1. You listen to the samples in `Music/LanternVoiceTest` on your phone and choose a voice setup. You've said Kokoro's voice is good enough but too slow, and you haven't heard the fast voices yet. Their settings are in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
+2. You answer the rest of the [open questions](#open-questions).
+3. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
+4. You approve the plan, then Phase 1 starts.
+
+**Current setup:**
+
+- All commits are on `master`. There is no `main` branch. Ask before every push.
+- The laptop has no Android Studio, JDK or `adb` installed. For USB work, download [Platform Tools](https://dl.google.com/android/repository/platform-tools-latest-windows.zip) to a temporary folder.
+- The phone has USB debugging on and the Kokoro demo app installed. The test tool and voice models I pushed to it have been removed.
+- Test scripts and raw results are in `tools/`.
+
 ## Problem
 
 You read light novels in a browser and often want to listen instead. Site TTS sounds bad and loses your place when you pause, switch apps or come back later. You also don't want to hunt across sites for a title or its chapters.

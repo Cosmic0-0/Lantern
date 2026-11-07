@@ -42,6 +42,8 @@ At the measured RTF of about 1.23, Kokoro falls behind by about 11 seconds for e
 
 The wait is chapter length x (RTF - 1). The handover point is chapter length x (1 - 1/RTF). The chapters I sampled would run about 10 to 13 minutes [estimate], so the usual wait is just over your 2-minute limit.
 
+These figures may be off in both directions. The later command-line runs in [Voice tests](../research/voice-tests.md#kokoro-cant-be-sped-up-with-settings) measured RTF 1.34 to 1.37, which makes the waits about 50% longer and the handover times about 40% longer. Kokoro also read faster than I assumed, so those chapters may run closer to 8 to 10 minutes.
+
 **Prepared audio removes most of the problem.** Audio generated ahead of time builds a lead, and listening uses it up at that 11 seconds a minute. One fully prepared 12-minute chapter should buy about an hour of unbroken Kokoro [estimate] and takes about 15 minutes to generate. So Lantern should prepare the current and next chapter while the phone charges, which stays within your one-chapter-ahead limit. Faster playback uses up the lead about twice as fast at 1.25x.
 
 **Kokoro can't be sped up with settings.** You judged its voice good enough but too slow. The timings for each voice and setting are in [Voice tests](../research/voice-tests.md#kokoro-cant-be-sped-up-with-settings).

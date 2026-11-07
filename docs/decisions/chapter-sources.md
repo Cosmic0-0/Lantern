@@ -13,6 +13,8 @@ This decision changed most. Pasting and sharing URLs don't meet "I don't want to
 
 **Recommendation: LNReader plugins, run inside Lantern.** The compiled AllNovelFull plugin is 19 KB and only needs `@libs/fetch`, `@libs/novelStatus`, `cheerio` and `htmlparser2`. [LNReader's plugin loader](https://github.com/LNReader/lnreader/blob/master/src/plugins/pluginManager.ts) shows the whole contract in a short list of modules. Lantern would run plugins in QuickJS through [quickjs-kt](https://github.com/dokar3/quickjs-kt), Apache-2.0 with Android and JVM targets, with a Kotlin bridge for network requests. This is unproven in Kotlin apart from IReader's different engine, so [Spike 3](../../PLAN.md#roadmap) proves it or falls back to hand-written adapters.
 
+The [plugin index](https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/.dist/plugins.min.json) gives each plugin's compiled file on the `plugins/v3.0.0` branch. Those paths contain square brackets, so `curl` needs `-g` to download them.
+
 **The flow you described:**
 
 1. Type a title and submit. Lantern asks every enabled site once and shows results as they arrive, grouped by title.

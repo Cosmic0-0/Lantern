@@ -1,0 +1,520 @@
+[
+  {
+    "group": "original",
+    "name": "Royal Road",
+    "base": "https://www.royalroad.com",
+    "term": "Beware of Chicken",
+    "robots": {
+      "count": 5,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.royalroad.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "original",
+    "name": "Scribble Hub",
+    "base": "https://www.scribblehub.com",
+    "term": "Beware of Chicken",
+    "robots": {
+      "count": 1,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.scribblehub.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "licensed",
+    "name": "Wuxiaworld",
+    "base": "https://www.wuxiaworld.com",
+    "term": "Renegade Immortal",
+    "robots": {
+      "count": 6,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "application/json",
+      "finalHost": "www.wuxiaworld.com",
+      "found": true
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "licensed",
+    "name": "Webnovel",
+    "base": "https://www.webnovel.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 9,
+      "blocksAll": false,
+      "blocksSearch": true
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.webnovel.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "Novel Fire",
+    "base": "https://novelfire.net",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 7,
+      "blocksAll": false,
+      "blocksSearch": true
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novelfire.net",
+      "found": true
+    },
+    "exampleFound": true,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novelfire.net/book/shadow-slave",
+      "chapterLinks": 3
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novelfire.net/book/shadow-slave/chapter-1",
+      "textChars": 11650
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "Novel Bin",
+    "base": "https://novelbin.xyz",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novelbin.xyz",
+      "found": true
+    },
+    "exampleFound": false,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novelbin.xyz/novel/shadow-slave",
+      "chapterLinks": 1
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novelbin.xyz/read/shadow-slave/chapter-1",
+      "textChars": 1213
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "Free Web Novel",
+    "base": "https://freewebnovel.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "freewebnovel.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "NovelFull",
+    "base": "https://novelfull.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 2,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novelfull.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "ReadNovelFull",
+    "base": "https://readnovelfull.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 1,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "readnovelfull.com",
+      "found": true
+    },
+    "exampleFound": true,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://readnovelfull.com/shadow-slave.html",
+      "chapterLinks": 32
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://readnovelfull.com/shadow-slave/chapter-1-nightmare-begins.html",
+      "textChars": 11985
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "AllNovelFull",
+    "base": "https://novgo.net",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 1,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novgo.net",
+      "found": true
+    },
+    "exampleFound": true,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novgo.net/shadow-slave.html",
+      "chapterLinks": 57
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://novgo.net/shadow-slave/chapter-1-nightmare-begins.html",
+      "textChars": 13901
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "Novel Hall",
+    "base": "https://novelhall.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 7,
+      "blocksAll": false,
+      "blocksSearch": true
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novelhall.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "LightNovelWorld",
+    "base": "https://lightnovelworld.org",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "lightnovelworld.org",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "NovelBuddy",
+    "base": "https://api.novelbuddy.me",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "application/json",
+      "finalHost": "api.novelbuddy.me",
+      "found": true
+    },
+    "exampleFound": true
+  },
+  {
+    "group": "aggregator",
+    "name": "NovelHi",
+    "base": "https://novelhi.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 8,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "application/json",
+      "finalHost": "novelhi.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "WuxiaWorld.Site",
+    "base": "https://wuxiaworld.site",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "wuxiaworld.site",
+      "found": true
+    },
+    "exampleFound": true,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://wuxiaworld.site/?s=Shadow+Slave&post_type=wp-manga&m_orderby",
+      "chapterLinks": 10
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://wuxiaworld.site/novel/i-swear-i-dont-have-a-python-in-my-pool/chapter-1532/",
+      "textChars": 12629
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "BoxNovel",
+    "base": "https://novelnice.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 403,
+      "challenged": true,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "novelnice.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "MTL Novels",
+    "base": "https://www.mtlnovels.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 1,
+      "blocksAll": true,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "Cowboy",
+      "ct": "text/html",
+      "finalHost": "www.mtlnovels.com",
+      "found": true
+    },
+    "exampleFound": true
+  },
+  {
+    "group": "aggregator",
+    "name": "LightNovelCave",
+    "base": "https://www.lightnovelcave.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.lightnovelcave.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "NovelCool",
+    "base": "https://www.novelcool.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 0,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.novelcool.com",
+      "found": true
+    },
+    "exampleFound": false,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://www.novelcool.com/novel/Shadow-Slave.html",
+      "chapterLinks": 2503
+    },
+    "chapter": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://www.novelcool.com/chapter/Shadow-Slave-Chapter-1/7332148/",
+      "textChars": 63601
+    }
+  },
+  {
+    "group": "aggregator",
+    "name": "Ranobes",
+    "base": "https://ranobes.net",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 10,
+      "blocksAll": false,
+      "blocksSearch": true
+    },
+    "search": {
+      "status": 503,
+      "challenged": true,
+      "server": "ddos-guard",
+      "ct": "text/html",
+      "finalHost": "ranobes.net",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "FanMTL",
+    "base": "https://www.fanmtl.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 6,
+      "blocksAll": false,
+      "blocksSearch": false
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "www.fanmtl.com",
+      "found": false
+    },
+    "exampleFound": false
+  },
+  {
+    "group": "aggregator",
+    "name": "WTR-LAB",
+    "base": "https://wtr-lab.com",
+    "term": "Shadow Slave",
+    "robots": {
+      "count": 13,
+      "blocksAll": false,
+      "blocksSearch": true
+    },
+    "search": {
+      "status": 200,
+      "challenged": false,
+      "server": "cloudflare",
+      "ct": "text/html",
+      "finalHost": "wtr-lab.com",
+      "found": true
+    },
+    "exampleFound": true,
+    "novel": {
+      "status": 200,
+      "challenged": false,
+      "url": "https://wtr-lab.com/en/novel-finder?text=Shadow+Slave&amp;page=0",
+      "chapterLinks": 0
+    }
+  }
+]

@@ -2,7 +2,7 @@
 
 A link means I read that source. [unverified] marks something I could not confirm.
 
-**Starting site list.** I tested 22 sites on 2026-11-07 from this PC, with a plainly named client, one test title each and at most five requests per site. Your phone or a different day may differ, so [Spike 3](../../PLAN.md#roadmap) repeats this. "Chapter text" means the text was in the page itself.
+**Starting site list.** I tested 22 sites on 2026-11-07 from this PC, with a plainly named client, one test title each and at most five requests per site. Your phone or a different day may differ, so [Spike 3](../../PLAN.md#roadmap) repeats this. "Chapter text" means the text was in the page itself. The scripts and raw results are in `tools/site-check/`.
 
 *On by default.* Plain requests work, and neither robots.txt nor the terms I found object.
 
