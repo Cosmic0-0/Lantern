@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: second draft for your approval, 2026-11-07. Nothing is built, installed or committed.
+Status: second draft for your approval, updated 2026-11-07 with measurements from your phone. Lantern itself isn't built yet.
 
 A link means I read that source. [estimate] marks my own calculation. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -117,7 +117,7 @@ The cost is a separate Windows app shell later. To keep that cheap, the chapter 
 
 Reliable audio and exact position are the reason to build at all, and every fork would need those rewritten. Search screens are routine, and the hard part, site parsing that keeps working, is what the plugins provide. Forking LNReader is the closest alternative, so I would revisit this once you've tried it in Phase 0.
 
-**Installing on your phone costs nothing.** [ADB installs are exempt](https://developer.android.com/developer-verification/guides/faq) from Google's developer verification, which goes global in 2027. A free limited-distribution account covering 20 devices is the backup. You don't need the Play Store.
+**Installing on your phone costs nothing.** [ADB installs are exempt](https://developer.android.com/developer-verification/guides/faq) from Google's developer verification, which goes global in 2027, and a USB install worked on your phone on 2026-11-07. A free limited-distribution account covering 20 devices is the backup. You don't need the Play Store.
 
 **Samsung setup.** Add Lantern to "Apps that won't be put to sleep" and set its battery use to unrestricted. [dontkillmyapp](https://dontkillmyapp.com/samsung) says foreground services should work properly since One UI 6, but marks that claim unverified, so the tests below check it.
 
@@ -128,7 +128,7 @@ Costs assume a chapter of 20,000 characters, about 20 minutes of audio [estimate
 | Engine | Voice quality | Cost per chapter | Offline | Latency | On the A26 |
 |---|---|---|---|---|---|
 | Android system TTS | Probably the voices you already dislike [unverified] | $0 | Depends on voice | Instant | Fine. [Highlight timing](https://developer.android.com/reference/android/speech/tts/UtteranceProgressListener) only comes if the engine supplies it |
-| Kokoro v1.0 fp32 | Best free candidate. [Apache-2.0](https://huggingface.co/hexgrad/Kokoro-82M), [28 English voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), `af_heart` graded A by its author | $0 | Yes | 5 to 10 s [estimate] | RTF 0.6 to 0.9 [estimate]. [About 350 MB](https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/kokoro.html) of files, about 620 MB of RAM measured on v1.1 |
+| Kokoro v1.0 fp32 | Best free candidate. [Apache-2.0](https://huggingface.co/hexgrad/Kokoro-82M), [28 English voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), `af_heart` graded A by its author | $0 | Yes | 6.3 s to load, then the wait below | Measured RTF about 1.23 and 874 MB of RAM once loaded. [About 350 MB](https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/kokoro.html) of files |
 | Supertonic 3 int8 | Vendor claims only, needs your ears. OpenRAIL-M license, fine for personal use | $0 | Yes | Under 1 s | Emulator RTF 0.20, 129 MB |
 | Kitten nano v0.8 fp32 | Needs your ears. Fewest word errors of the English models in the benchmark. Apache-2.0 | $0 | Yes | Under 1 s | Emulator RTF 0.09, 64 MB |
 | Piper medium | Usually rated less natural [unverified]. More word errors in the tested voice | $0 | Yes | Fastest | Emulator RTF 0.05, 82 MB |
@@ -142,34 +142,48 @@ Costs assume a chapter of 20,000 characters, about 20 minutes of audio [estimate
 
 **Recommendation: on-device only, through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx).** It is Apache-2.0, ships Android and Windows builds, and runs all of these models through one API. Use Kokoro v1.0 as the great voice and pick the fast voice by ear if you need one.
 
-Three details matter:
+Four details matter:
 
 - Avoid Kokoro v1.1 for English. It [drops most English voices](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh).
 - Default to fp32. On a Pixel 10 Pro [it was faster than int8](https://github.com/k2-fsa/sherpa-onnx/issues/3754), 0.48 to 0.51 against 0.62, and int8 sometimes produced garbage audio. A [fix merged on 2026-10-26](https://github.com/k2-fsa/sherpa-onnx/pull/4087), so int8 is worth retesting.
 - The prebuilt library [links GPL-3.0 espeak-ng](https://github.com/muxable/rtchat/issues/1500). That doesn't matter for a personal app, but it would if you ever published Lantern.
+- Leave out the Chinese rule files. The demo app is built with `number-zh.fst`, `date-zh.fst` and `phone-zh.fst`, and the engine [runs them on the text](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/csrc/offline-tts-kokoro-impl.h) before speaking, which fits the Chinese-sounding numbers you heard. Lantern would load English only and turn numbers into English words itself in `core`, so "Chapter 42" becomes "Chapter forty-two". Spike 1 tests this.
 
 #### Kokoro's wait against your 2-minute limit
 
-I expect 5 to 10 seconds on a chapter that isn't prepared, and no wait on a prepared one. That is about 2 to 5 s to load the model plus 2 to 5 s for the first sentence [estimate]. The Kokoro test in Phase 0 replaces this estimate with a real number.
+Measured on your phone on 2026-11-07, with the sherpa-onnx demo at its default 4 threads and speaker 3:
 
-I found no Kokoro benchmark for the Exynos 1380, so the estimate comes from RTF [0.48 to 0.51 on a Pixel 10 Pro](https://github.com/k2-fsa/sherpa-onnx/issues/3754) and [0.66 to 0.68 on a Snapdragon 865/870](https://github.com/k2-fsa/sherpa-onnx/issues/3897) with a Kokoro-based model, both at 4 threads. [Listings](https://www.kimovil.com/en/samsung-galaxy-a26-5g/antutu) show your SM-A266B as the global model with the Exynos 1380, though [one pre-launch benchmark](https://www.sammobile.com/?p=16593130) showed an Exynos 1280, so measure rather than assume.
+| Measure | Result |
+|---|---|
+| Phone | SM-A266B, Exynos 1380, 6 GB RAM, Android 16, One UI 8.5 |
+| Generating and playing a 4-minute passage | A few seconds under 9 minutes |
+| Speed | RTF about 1.23 |
+| Model load | 6.3 s |
+| RAM once loaded | About 874 MB |
 
-For a 20-minute chapter:
+My earlier estimate of 0.6 to 0.9 was too optimistic. This is one short run, and heat and battery use over a whole chapter are still unmeasured.
 
-| Kokoro RTF on your A26 | Wait with Kokoro alone | Or: fast voice for this long, then Kokoro | What Lantern does |
+At this speed Kokoro falls behind by about 11 seconds for every minute you listen:
+
+| Chapter length | Wait with Kokoro alone | Or: fast voice for this long, then Kokoro | Time to prepare it ahead |
 |---|---|---|---|
-| 0.6 to 0.9, my estimate | 5 to 10 s | Not needed | Kokoro alone |
-| 1.0 | About 30 s, as a safety buffer | Not needed | Kokoro alone |
-| 1.1 | About 2 min | About 2 min | Kokoro alone, at your limit |
-| 1.2 | About 4 min | About 3 min | Fast voice, then Kokoro |
-| 1.5 | About 10 min | About 7 min | Fast voice, then Kokoro |
-| 2.0 | About 20 min | About 10 min | Fast voice, and reconsider Kokoro as default |
+| 9 min | About 2 min | About 1.7 min | About 11 min |
+| 12 min | About 2.8 min | About 2.2 min | About 15 min |
+| 20 min | About 4.6 min | About 3.7 min | About 25 min |
 
-The wait is chapter length x (RTF - 1). The handover point is chapter length x (1 - 1/RTF). Shorter chapters scale both down.
+The wait is chapter length x (RTF - 1). The handover point is chapter length x (1 - 1/RTF). The chapters I sampled would run about 10 to 13 minutes [estimate], so the usual wait is just over your 2-minute limit.
 
-**Above RTF 1, the wait repeats.** Below 1, Kokoro finishes early and spends the spare time on the next chapter, so chapters run together with no pause. Above 1, it never gets ahead. You would hit the wait or the fast voice again at every chapter, including with the screen off. Heat could also push the speed down over a long chapter, so Spike 1 measures a whole one.
+**Prepared audio removes most of the problem.** Audio generated ahead of time builds a lead, and listening uses it up at that 11 seconds a minute. One fully prepared 12-minute chapter should buy about an hour of unbroken Kokoro [estimate] and takes about 15 minutes to generate. So Lantern should prepare the current and next chapter while the phone charges, which stays within your one-chapter-ahead limit. Faster playback uses up the lead about twice as fast at 1.25x.
 
-**How the handover works.** Each sentence plays the best audio available for it. Kokoro starts generating at the calculated point ahead of you, and when playback reaches it, the voice changes at that sentence boundary. Position is stored against the text, so the swap can't lose your place. Running both engines slows Kokoro and uses more RAM, and Android 17 adds [RAM-based app memory limits](https://developer.android.com/about/versions/17/behavior-changes-all), so Spike 1 tests this too.
+**What Lantern does depends on the speed Spike 1 reaches.** Kokoro needs to be about 19% faster to reach RTF 1.0. Spike 1 tries keeping its threads on the four fast cores, the fixed int8 model and sherpa-onnx 2.0.1. Whether those help enough is [unverified].
+
+| RTF after Spike 1 | Unprepared chapter | Fast voice in the MVP? |
+|---|---|---|
+| 1.0 or lower | Kokoro after a few seconds | No |
+| About 1.0 to 1.15 | Kokoro after under 2 minutes on a 12-minute chapter | No |
+| Above about 1.15, as measured today | Fast voice, then Kokoro | Yes |
+
+**How the handover works.** Each sentence plays the best audio available for it. Kokoro starts generating at the calculated point ahead of you, and when playback reaches it, the voice changes at that sentence boundary. Position is stored against the text, so the swap can't lose your place. Running both engines slows Kokoro and adds to its 874 MB of RAM, and Android 17 adds [RAM-based app memory limits](https://developer.android.com/about/versions/17/behavior-changes-all), so Spike 1 tests this too.
 
 **Loading one chapter ahead.** When a chapter starts, Lantern fetches the next chapter's text. Once the current chapter's audio is finished, it generates the next chapter's audio. Nothing beyond that is fetched or generated. Audio is 2.88 MB a minute at 24 kHz, about 58 MB per 20-minute chapter, and only the current and next chapters stay on disk.
 
@@ -283,7 +297,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 1. In-app title search across the on-by-default sites.
 2. "Add to library", a library screen and a full chapter list for each book.
 3. A reader view with sentence highlight, follow mode, tap to jump and "Back to voice".
-4. Kokoro on-device speech, plus the fast voice with handover only if the test requires it.
+4. Kokoro on-device speech, preparing the current and next chapter while charging, plus the fast voice with handover unless Spike 1 gets Kokoro to about RTF 1.15 or lower.
 5. Screen-off playback with lock-screen and notification controls.
 6. Position saving, resume and the undo list, shared by reading and listening.
 7. Auto-advance, with only the next chapter loaded ahead.
@@ -306,30 +320,23 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 **Phase 0: phone tests with no code.** No PC needed.
 
-*Kokoro test.* It answers your 2-minute question.
+*Kokoro test, done 2026-11-07.* RTF about 1.23, with the results under Decision 2. The [demo app](https://huggingface.co/csukuangfj/sherpa-onnx-apk/resolve/main/tts-new/1.12.21/sherpa-onnx-1.12.21-arm64-v8a-zh_en-tts-kokoro-multi-lang-v1_0.apk) had to go on over USB. The copy downloaded on the phone had the right size but the wrong contents, and the phone's log showed failure `-103`, "SHA-256 digest of contents did not verify". Lantern must verify a checksum after downloading any voice model.
 
-1. Download and install the [Kokoro test app](https://huggingface.co/csukuangfj/sherpa-onnx-apk/resolve/main/tts-new/1.12.21/sherpa-onnx-1.12.21-arm64-v8a-zh_en-tts-kokoro-multi-lang-v1_0.apk), 357 MB. It's the sherpa-onnx project's own demo.
-2. Open it, close it, then open it again and time how long the screen takes to appear. That is the model load time, because the first launch also copies files.
-3. Set the speaker ID to 3, which is `af_heart`, and paste in a whole chapter. Note the battery percentage.
-4. Press Generate and start a stopwatch. Stop it when Generate becomes tappable again. Call that T.
-5. Press Play and time the full audio. Call that L.
-6. RTF = T / L - 1. Look it up in the wait table under Decision 2, and tell me RTF, load time, battery used and how hot the phone got.
-
-Gaps between sentences are normal in this demo and say nothing about speed. Its code [plays each sentence before generating the next](https://github.com/k2-fsa/sherpa-onnx/blob/master/android/SherpaOnnxTts/app/src/main/java/com/k2fsa/sherpa/onnx/MainActivity.kt), which is also why the formula subtracts 1. Lantern won't work that way. Speaker IDs 2, 16 and 21 are `af_bella`, `am_michael` and `bf_emma`, if you want to compare voices.
+To repeat the test, time Generate until it becomes tappable again (T), then time Play (L). RTF = T / L - 1. Gaps between sentences are normal in this demo, because its code [plays each sentence before generating the next](https://github.com/k2-fsa/sherpa-onnx/blob/master/android/SherpaOnnxTts/app/src/main/java/com/k2fsa/sherpa/onnx/MainActivity.kt). That is why the formula subtracts 1, and Lantern won't work that way. Speaker IDs 2, 3, 16 and 21 are `af_bella`, `af_heart`, `am_michael` and `bf_emma`, if you want to compare voices.
 
 *Baseline test.* Install [LNReader](https://www.lnreader.app/releases), [add a plugin repository](https://www.lnreader.app/plugins), and try Kokoro as the system voice through the [sherpa-onnx engine APK](https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine.html). That combination is [unverified]. It shows how close a free app already gets, and if it's enough, you can skip this build.
 
-*Fast voice, only if the Kokoro test comes out above RTF 1.1.* Try Kitten and Piper from the [same project's APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), plus the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main), and pick by ear.
+*Fast voice, needed now that Kokoro measured above your limit.* Try Kitten and Piper from the [same project's APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), plus the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main), and pick by ear.
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
 
-- **Spike 1, engine.** Generate a full chapter at 2 and 4 threads, with fp32 and the fixed int8, and with both voices running if needed. Record RTF, heat, battery and RAM. This sets the MVP's voice setup.
+- **Spike 1, engine.** On sherpa-onnx 2.0.1, generate a full chapter at 2 and 4 threads, with threads kept on the fast cores, with fp32 and the fixed int8, and with both voices running. Record RTF, heat, battery and RAM. Check that numbers and dates are read in English with the Chinese rule files left out. This sets the MVP's voice setup.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise Decision 4 before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the site tests through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
 **Phase 2: MVP,** as scoped above.
 
-**Phase 3: comfort.** Switching a book to another site when one breaks, a sleep timer, pronunciation fixes for character names, skip rules, and preparing the current and next chapter while charging.
+**Phase 3: comfort.** Switching a book to another site when one breaks, a sleep timer, pronunciation fixes for character names and skip rules.
 
 **Phase 4: more sources.** The visible in-app browser for blocked sites like Scribble Hub, share-from-browser with Mozilla's [Readability](https://github.com/mozilla/readability) for anything else, updating plugins from inside the app after review, and EPUB import for DRM-free files.
 
@@ -344,12 +351,12 @@ Decisions for you:
 1. **Is the default site list OK?** I recommend leaving sites that object off by default. You can turn one on per site, accepting the risk under Decision 3.
 2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
 3. **English only?** I assumed yes. Other languages would change the voice comparison.
-4. **6 or 8 GB of RAM?** Kokoro needs about 620 MB, so either should work, but 6 GB leaves less room for the handover with two engines running.
+4. **Is Kokoro's voice worth the extra work?** You've now heard it. If a faster voice sounds good enough, the handover and chapter preparation could go, and Lantern gets much simpler.
 
 Only your phone can answer these:
 
-- Kokoro's real speed, heat and battery use on your A26
-- Which voices you actually like
+- Kokoro's speed, heat and battery use over a whole chapter
+- Which fast voice you like
 - Whether plugins run correctly in QuickJS on the phone
 - Whether the on-by-default sites answer the phone the way they answered this PC
 - Whether sentence-by-sentence WAV playback has audible gaps
