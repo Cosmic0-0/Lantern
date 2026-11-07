@@ -175,13 +175,35 @@ The wait is chapter length x (RTF - 1). The handover point is chapter length x (
 
 **Prepared audio removes most of the problem.** Audio generated ahead of time builds a lead, and listening uses it up at that 11 seconds a minute. One fully prepared 12-minute chapter should buy about an hour of unbroken Kokoro [estimate] and takes about 15 minutes to generate. So Lantern should prepare the current and next chapter while the phone charges, which stays within your one-chapter-ahead limit. Faster playback uses up the lead about twice as fast at 1.25x.
 
-**What Lantern does depends on the speed Spike 1 reaches.** Kokoro needs to be about 19% faster to reach RTF 1.0. Spike 1 tries keeping its threads on the four fast cores, the fixed int8 model and sherpa-onnx 2.0.1. Whether those help enough is [unverified].
+**Kokoro can't be sped up with settings.** You judged its voice good enough but too slow. On 2026-11-07 I timed the same passage on your phone with sherpa-onnx 2.0.1's command-line tool. The screen state wasn't controlled and each result is one run:
 
-| RTF after Spike 1 | Unprepared chapter | Fast voice in the MVP? |
-|---|---|---|
-| 1.0 or lower | Kokoro after a few seconds | No |
-| About 1.0 to 1.15 | Kokoro after under 2 minutes on a 12-minute chapter | No |
-| Above about 1.15, as measured today | Fast voice, then Kokoro | Yes |
+| Voice and setting | RTF on your A26 | Download | Sound, from community reports until you listen |
+|---|---|---|---|
+| Kokoro fp32, 4 threads, any cores | 1.34 to 1.37 | 349 MB | The most natural |
+| Kokoro fp32, 4 threads on fast cores | 1.47 | | |
+| Kokoro fp32, 3 threads on fast cores | 1.82 | | |
+| Kokoro fp32, 8 threads | 1.76 | | |
+| Kokoro int8, 4 threads on fast cores | 2.62 | 132 MB | |
+| Pocket TTS int8, 4 threads | 1.12 to 1.26 | 98 MB | Not rated. No real speed gain, and non-commercial license |
+| Supertonic 3 int8, 8 steps | 0.93 | 128 MB | Reported less natural than Kokoro |
+| Supertonic 3 int8, 5 steps | 0.59 to 0.61 | | Same model at its default setting |
+| Supertonic 3 int8, 3 steps | 0.38 | | Lower quality setting |
+| Kitten nano v0.8 fp32, 4 threads | 0.30 to 0.64 per sentence | 63 MB | Few independent reports |
+| Piper lessac medium, 4 threads | 0.13 to 0.16 | 67 MB | "Somewhat mechanical" |
+
+Compare generation time as well as RTF, because voices read at different paces. For the same text, Kokoro produced about 44 s of audio and Supertonic about 70 s. Sound notes come from [a CPU benchmark](https://bittide.aicompass.dev/article/213f0a6c-be96-402b-8672-c2d9d3cb6029) and [a Piper comparison](https://www.codesota.com/text-to-speech/piper-vs-kokoro), neither of them a blind test. Your samples are in the phone's `Music/LanternVoiceTest` folder.
+
+**Options now that Kokoro can't keep up:**
+
+| Option | Wait | Extra work | Verdict |
+|---|---|---|---|
+| Supertonic 3 as the only voice | Seconds | Least | Recommended if the samples sound good enough to you |
+| Kokoro, with a fast voice first on unprepared chapters and preparation while charging | None for you, but the voice changes mid-chapter | Most | Recommended if only Kokoro will do |
+| Kokoro alone, with preparation while charging | About 3 min on an unprepared 9-minute chapter | Medium | Breaks your 2-minute limit |
+| Laptop generates Kokoro and sends it to the phone | None if prepared | Medium, and the laptop must be on | Later option |
+| Cloud voices | Seconds | Accounts and internet | Rejected, see the table above |
+
+**Unknown words are a new risk.** sherpa-onnx 2.0 removed espeak-ng and looks words up in a lexicon. Unknown words are skipped silently. On my passage the tool skipped any word touching a quotation mark, plus "Kael", "Sealed", "wanted", "opens" and "minutes" with Kokoro, and "her" with Piper and Kitten. Light novels are full of invented names, so this could drop words without warning. Supertonic uses no lexicon, so it shouldn't have this problem, but I didn't check its logs for skipped words. The demo app you tried is the older 1.12.21 with espeak-ng data. Spike 1 must count skipped words on real chapters, strip quotation marks first, and compare 2.0 with the older version. Kitten also crashed on the whole passage, so it needs one sentence at a time.
 
 **How the handover works.** Each sentence plays the best audio available for it. Kokoro starts generating at the calculated point ahead of you, and when playback reaches it, the voice changes at that sentence boundary. Position is stored against the text, so the swap can't lose your place. Running both engines slows Kokoro and adds to its 874 MB of RAM, and Android 17 adds [RAM-based app memory limits](https://developer.android.com/about/versions/17/behavior-changes-all), so Spike 1 tests this too.
 
@@ -297,7 +319,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 1. In-app title search across the on-by-default sites.
 2. "Add to library", a library screen and a full chapter list for each book.
 3. A reader view with sentence highlight, follow mode, tap to jump and "Back to voice".
-4. Kokoro on-device speech, preparing the current and next chapter while charging, plus the fast voice with handover unless Spike 1 gets Kokoro to about RTF 1.15 or lower.
+4. On-device speech in the voice setup you choose from the samples, either Supertonic alone or Kokoro with a fast voice and preparation while charging.
 5. Screen-off playback with lock-screen and notification controls.
 6. Position saving, resume and the undo list, shared by reading and listening.
 7. Auto-advance, with only the next chapter loaded ahead.
@@ -326,11 +348,11 @@ To repeat the test, time Generate until it becomes tappable again (T), then time
 
 *Baseline test.* Install [LNReader](https://www.lnreader.app/releases), [add a plugin repository](https://www.lnreader.app/plugins), and try Kokoro as the system voice through the [sherpa-onnx engine APK](https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine.html). That combination is [unverified]. It shows how close a free app already gets, and if it's enough, you can skip this build.
 
-*Fast voice, needed now that Kokoro measured above your limit.* Try Kitten and Piper from the [same project's APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), plus the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main), and pick by ear.
+*Fast voice samples, saved to `Music/LanternVoiceTest` on your phone on 2026-11-07.* Your choice from these sets the voice setup. To make more, push `sherpa-onnx-v2.0.1-android-aarch64-termux-static` plus Termux's `libc++_shared.so` to `/data/local/tmp`, and run `sherpa-onnx-offline-tts` with `LD_LIBRARY_PATH=.`. Piper and Kitten also need `lexicon-en-us.txt` from the `tts-models` release. Google's Platform Tools aren't installed on the laptop, so download them again. The demo APKs are another way to try Kitten and Piper from the [same project's APKs](https://k2-fsa.github.io/sherpa/onnx/tts/apk.html), plus the [Supertonic TTS app](https://apt.izzysoft.de/fdroid/index/apk/com.brahmadeo.supertonic.tts?repo=main), and pick by ear.
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
 
-- **Spike 1, engine.** On sherpa-onnx 2.0.1, generate a full chapter at 2 and 4 threads, with threads kept on the fast cores, with fp32 and the fixed int8, and with both voices running. Record RTF, heat, battery and RAM. Check that numbers and dates are read in English with the Chinese rule files left out. This sets the MVP's voice setup.
+- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF, heat, battery and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English. Test both voices together only if you choose the handover.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise Decision 4 before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the site tests through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
@@ -351,7 +373,7 @@ Decisions for you:
 1. **Is the default site list OK?** I recommend leaving sites that object off by default. You can turn one on per site, accepting the risk under Decision 3.
 2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
 3. **English only?** I assumed yes. Other languages would change the voice comparison.
-4. **Is Kokoro's voice worth the extra work?** You've now heard it. If a faster voice sounds good enough, the handover and chapter preparation could go, and Lantern gets much simpler.
+4. **Which voice setup?** Listen to `Music/LanternVoiceTest` on your phone. If Supertonic sounds good enough, I recommend it alone, which removes the handover and chapter preparation. If only Kokoro will do, Lantern needs both.
 
 Only your phone can answer these:
 
