@@ -12,9 +12,9 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 
 **Next steps, in order:**
 
-1. ~~Choose a voice setup.~~ Done 2026-11-08: Supertonic 3 alone, see [TTS engine](docs/decisions/voice-engine.md#your-choice).
+1. ~~Choose a voice setup.~~ Done 2026-11-08: Phonon 31M with voices Everly and Trevor, which you preferred to Supertonic and which ran faster on the phone. See [TTS engine](docs/decisions/voice-engine.md#your-choice).
 2. ~~Decide on the laptop precompute idea.~~ Done 2026-11-08: it becomes [version 2](docs/decisions/laptop-precompute.md), and version 1 is the phone app alone.
-3. Optional before Phase 1: listen to a Phonon sample, since it's new and may beat Supertonic. Running it on the phone needs a source build, so the sample would be made on the laptop. See [Phonon, checked 2026-11-08](docs/decisions/laptop-precompute.md#phonon-checked-2026-11-08). Phone precompute was reviewed on 2026-11-08 and [deferred](docs/decisions/laptop-precompute.md#phone-precompute-not-now).
+3. Check that samples 12 and 13 in `Music/LanternVoiceTest`, made on the phone, sound as good as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
 4. You answer the rest of the [open questions](#open-questions).
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
 6. You approve the plan, then Phase 1 starts.
@@ -48,7 +48,7 @@ Your answers set these constraints:
 The recommended path needs no account, login or backend. The only option that would need accounts is cloud TTS, which I rejected.
 
 - Decision 1, [app type](docs/decisions/app-type.md): native Kotlin, Jetpack Compose and Media3.
-- Decision 2, [TTS engine](docs/decisions/voice-engine.md): on-device only, through sherpa-onnx.
+- Decision 2, [TTS engine](docs/decisions/voice-engine.md): on-device only, with Phonon's own runtime on the phone and sherpa-onnx as the fallback.
 - Decision 3, [finding and loading chapters](docs/decisions/chapter-sources.md): LNReader plugins, run inside Lantern.
 - Decision 4, [position tracking](docs/decisions/position-tracking.md): the text is the source of truth and audio is a disposable cache.
 - Decision 5, [laptop precompute](docs/decisions/laptop-precompute.md): version 2 adds a laptop app that generates chapters with a bigger model and loads them onto the phone over USB.
@@ -68,7 +68,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 1. In-app title search across the on-by-default sites.
 2. "Add to library", a library screen and a full chapter list for each book.
 3. A reader view with sentence highlight, follow mode, tap to jump and "Back to voice".
-4. On-device speech with Supertonic 3 int8 at 5 steps, with voice B (`--sid=0`, female) and voice A (`--sid=5`, male) in settings. Both come in the same model download.
+4. On-device speech with Phonon 31M q8 at 2 to 4 threads, with Everly (female) and Trevor (male) in settings. The model is 64.5 MB and each voice is 256 KB.
 5. Screen-off playback with lock-screen and notification controls.
 6. Position saving, resume and the undo list, shared by reading and listening.
 7. Auto-advance, with only the next chapter loaded ahead.
@@ -101,7 +101,7 @@ Phases 0 to 4 are version 1, the phone app alone.
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
 
-- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English.
+- **Spike 1, engine.** Build Phonon's `libptts_ffi.so` into a test app and generate a full chapter with Everly at 2 to 4 threads. Record RTF and RAM, listen for dropped or garbled words on real chapters, and check how numbers and dates are read. If Phonon can't work inside an app, fall back to Supertonic through sherpa-onnx and count its skipped words.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the [site tests](docs/research/site-tests.md) through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
@@ -124,7 +124,7 @@ Decisions for you:
 1. **Is the [default site list](docs/research/site-tests.md) OK?** I recommend leaving sites that object off by default. You can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
 2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
 3. **English only?** I assumed yes. Other languages would change the voice comparison.
-4. ~~Which voice setup?~~ Answered 2026-11-08: Supertonic 3 alone, voices B and A.
+4. ~~Which voice setup?~~ Answered 2026-11-08: Phonon 31M, voices Everly and Trevor.
 5. ~~Laptop precompute?~~ Answered 2026-11-08: version 2, with a bigger model and throttled batches. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 
 Only your phone can answer these:

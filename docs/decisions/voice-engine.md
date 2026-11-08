@@ -21,7 +21,20 @@ Costs assume a chapter of 20,000 characters, about 20 minutes of audio [estimate
 
 ## Your choice
 
-On 2026-11-08 you listened to the [samples](../research/voice-tests.md#fast-voice-samples) and chose Supertonic 3 int8 at 5 steps, voice B (`--sid=0`, female) or voice A (`--sid=5`, male). You rated Kitten, Piper, Supertonic at 3 steps and the Kokoro digits test lower. Lantern ships Supertonic alone, with both voices in settings, so the Kokoro handover, the fast-voice fallback and preparing chapters while charging are dropped from the MVP. The Kokoro sections below are kept as the record of why.
+**Updated 2026-11-08: Phonon 31M English replaces Supertonic.** You preferred its samples to Supertonic's, choosing Everly (female) and Trevor (male), with the default voice as a possible third. On your phone it is faster than Supertonic:
+
+| Setting, on `tools/voice-test/passage.txt` | RTF on your A26 | First audio |
+|---|---|---|
+| Phonon q8, 4 threads, Everly | 0.33 and 0.40 | 0.38 to 0.46 s |
+| Phonon q8, 4 threads, Trevor | 0.40 | 0.45 s |
+| Phonon q8, 2 threads, Everly | 0.43 | 0.43 s |
+| Supertonic 3 int8, 5 steps, for comparison | 0.59 to 0.61 | not measured |
+
+These ran through `adb shell` with ptts v0.6.0 built from source, the phone plugged in, one or two runs each. The passage made 64 to 69 s of audio, against Supertonic's 70 s. Samples 12 and 13 in `Music/LanternVoiceTest` were made on the phone. Even at 2 threads Phonon makes audio more than twice as fast as it plays, so Lantern can run it gently.
+
+What changes: Phonon doesn't run through sherpa-onnx. Lantern would build Phonon's runtime from source as `libptts_ffi.so`, a C library with a Kotlin wrapper through JNA, described in its [Android guide](https://github.com/gradium-ai/xn-ptts/blob/main/android/README.md). It's Apache-2.0 for the weights and MIT or Apache-2.0 for the runtime. It reads numbers itself, only partly, so `core` still checks them. Supertonic through sherpa-onnx stays the fallback if [Spike 1](../../PLAN.md#roadmap) can't make Phonon work inside an app. More detail is in [Laptop precompute](laptop-precompute.md#phonon-checked-2026-11-08).
+
+**Earlier choice, 2026-11-08.** You listened to the [samples](../research/voice-tests.md#fast-voice-samples) and chose Supertonic 3 int8 at 5 steps, voice B (`--sid=0`, female) or voice A (`--sid=5`, male). You rated Kitten, Piper, Supertonic at 3 steps and the Kokoro digits test lower. Lantern ships Supertonic alone, with both voices in settings, so the Kokoro handover, the fast-voice fallback and preparing chapters while charging are dropped from the MVP. The Kokoro sections below are kept as the record of why.
 
 On your phone it measured RTF 0.59 to 0.61, so it builds a lead while you listen and only falls behind above about 1.6x playback speed. It reads slower than Kokoro, about 800 characters a minute against 1,300, so a 10,000 to 13,000 character chapter runs about 12 to 16 minutes and takes about 7 to 10 minutes to generate in the background [estimate]. Supertonic uses no lexicon, but its logs weren't checked for skipped words, so [Spike 1](../../PLAN.md#roadmap) still counts them.
 

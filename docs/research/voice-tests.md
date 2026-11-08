@@ -20,6 +20,17 @@ My earlier estimate of 0.6 to 0.9 was too optimistic. This is one short run, and
 
 CPU timings from 2026-11-08 are in [Laptop precompute](../decisions/laptop-precompute.md#laptop-speed-measured-2026-11-08). The laptop CPU ran Supertonic at RTF 0.20 and Kokoro at 0.48, about 3 times faster than the phone.
 
+## Phonon on your phone
+
+Timings from 2026-11-08 are in [TTS engine](../decisions/voice-engine.md#your-choice). To repeat them:
+
+1. Install Rust with the `aarch64-linux-android` target, `cargo-ndk` and NDK r28c. On Windows without Visual Studio, use the `x86_64-pc-windows-gnu` host toolchain.
+2. In a clone of [xn-ptts](https://github.com/gradium-ai/xn-ptts) at `v0.6.0`, unset `RUSTFLAGS`, set `CARGO_TARGET_AARCH64_LINUX_ANDROID_RUSTFLAGS="-C strip=symbols -C target-cpu=generic -C target-feature=+dotprod,+fp16"`, and run `cargo ndk -t arm64-v8a -P 28 build --release -p ptts --features cli --bin ptts`.
+3. Push `ptts` to `/data/local/tmp/lantern/phonon`, with the `gradium/phonon-31m-en` files in `model/` and voice files from `gradium/phonon-voices` beside it. Everly is `vjFyp2BcCyTlUmYb.safetensors` and Trevor is `0zLApsZfVLLNaEGl.safetensors`.
+4. Run `HOME=$PWD HF_HUB_OFFLINE=1 ./ptts --model ./model --quant q8 --lang en --threads 4 --voice ./everly.safetensors -o out.wav "$(cat passage.txt)"`. It prints RTF and first-audio time.
+
+The local `.bench/` folder holds these tools and is gitignored.
+
 ## Kokoro test, done 2026-11-07
 
 RTF about 1.23, with the results under [Measured on your phone](#measured-on-your-phone). The [demo app](https://huggingface.co/csukuangfj/sherpa-onnx-apk/resolve/main/tts-new/1.12.21/sherpa-onnx-1.12.21-arm64-v8a-zh_en-tts-kokoro-multi-lang-v1_0.apk) had to go on over USB. The copy downloaded on the phone had the right size but the wrong contents, and the phone's log showed failure `-103`, "SHA-256 digest of contents did not verify". Lantern must verify a checksum after downloading any voice model.

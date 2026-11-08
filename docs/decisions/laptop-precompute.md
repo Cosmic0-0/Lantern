@@ -76,7 +76,7 @@ If heat ever becomes a problem, the smaller fix is a "prepare this chapter now" 
 
 ## Phonon, checked 2026-11-08
 
-**You prefer it to Supertonic.** On 2026-11-08 you listened to samples 7 to 11 in `Music/LanternVoiceTest`, made on the laptop with ptts v0.6.0, `--quant q8`, from `tools/voice-test/passage.txt`. You liked Everly (8) for a female voice and Trevor (11) for a male voice, and found the default voice (7) not bad. Phonon replaces Supertonic in version 1 if it is fast enough on the phone.
+**You prefer it to Supertonic.** On 2026-11-08 you listened to samples 7 to 11 in `Music/LanternVoiceTest`, made on the laptop with ptts v0.6.0, `--quant q8`, from `tools/voice-test/passage.txt`. You liked Everly (8) for a female voice and Trevor (11) for a male voice, and found the default voice (7) not bad. It was faster than Supertonic on the phone too, so it became the version 1 voice. Phone timings are in [TTS engine](voice-engine.md#your-choice).
 
 Laptop CPU timings, one run each: RTF 0.19 to 0.22 across five voices, first audio after about 0.2 s, and 63 to 68 s of audio for the passage against Supertonic's 70 s.
 
@@ -88,5 +88,4 @@ Laptop CPU timings, one run each: RTF 0.19 to 0.22 across five voices, first aud
 
 ## Still open
 
-- Phonon's speed on the phone, which decides whether it replaces Supertonic.
 - A listening test of Ming samples made on the laptop GPU.

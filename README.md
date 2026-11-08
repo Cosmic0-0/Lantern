@@ -15,7 +15,7 @@ The phone voice is chosen. The next steps are answering the remaining [open ques
 These choices are recommendations until the spikes confirm them:
 
 - **App:** native Kotlin, Jetpack Compose, and Media3. See [app type](docs/decisions/app-type.md).
-- **Voices:** on-device speech through sherpa-onnx, with Supertonic 3 on the phone. See [voice engine](docs/decisions/voice-engine.md).
+- **Voices:** on-device speech with Phonon 31M on the phone, through its own runtime. See [voice engine](docs/decisions/voice-engine.md).
 - **Chapters:** LNReader's site plugins, run inside the app. See [chapter sources](docs/decisions/chapter-sources.md), which also covers site terms and legal risks.
 - **Reading position:** saved per sentence against the text. See [position tracking](docs/decisions/position-tracking.md).
 - **Version 2:** laptop precompute. See [laptop precompute](docs/decisions/laptop-precompute.md).
