@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: second draft for your approval, updated 2026-11-08 with your voice choice. The laptop app is dropped for now. Lantern itself isn't built yet.
+Status: second draft for your approval, updated 2026-11-08: Phonon is the voice, and the laptop app and phone precompute are dropped. Lantern itself isn't built yet.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -22,8 +22,8 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 **Current setup:**
 
 - All commits are on `master`. There is no `main` branch. Ask before every push.
-- The laptop has no Android Studio or JDK. `adb`, Rust, the Android NDK and the Phonon build are in the gitignored `.bench/` folder, about 4 GB, which can be deleted when no longer needed.
-- The phone has USB debugging on and the Kokoro demo app installed. The test tool and voice models I pushed to it have been removed.
+- The laptop has no Android Studio or JDK. `adb`, Rust, the Android NDK and the Phonon phone build are in the gitignored `.bench/` folder, which Spike 1 can reuse.
+- The phone has USB debugging on and the Kokoro demo app installed. The voice samples are in `Music/LanternVoiceTest`.
 - Test scripts and raw results are in `tools/`.
 
 ## Problem
@@ -39,7 +39,7 @@ Your answers set these constraints:
 - Only one chapter past the current one gets loaded ahead, no more.
 - Lantern is the phone app alone. A laptop app is dropped for now and may return if better voice models come out.
 - Battery and heat aren't tuned or measured in version 1, as long as Lantern never runs the phone flat out. If it overheats, optimizing comes then. Decided 2026-11-08.
-- A Kokoro wait under 2 minutes is acceptable. Above that, a fast voice plays first and hands over to Kokoro mid-chapter.
+- A wait under 2 minutes before audio starts is acceptable. Phonon starts in under half a second, so this no longer shapes the design.
 
 "Never loses my place" needs a test, so this is the definition I propose: after a pause, app switch, phone call, Bluetooth drop, force stop or reboot, playback resumes within one sentence of where the audio stopped.
 
@@ -56,7 +56,7 @@ The recommended path needs no account, login or backend. The only option that wo
 ## Research
 
 - [Reference review](docs/research/reference-review.md): lumina-reader and the better references I read
-- [Voice tests](docs/research/voice-tests.md): Kokoro timings from your phone, other voices, and how to repeat the tests
+- [Voice tests](docs/research/voice-tests.md): timings from your phone and laptop for every voice tried, and how to repeat the tests
 - [Site tests](docs/research/site-tests.md): the sites I tested for search and chapter text
 
 ## MVP scope
@@ -95,9 +95,9 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 *Baseline test.* Install [LNReader](https://www.lnreader.app/releases), [add a plugin repository](https://www.lnreader.app/plugins), and try Kokoro as the system voice through the [sherpa-onnx engine APK](https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine.html). That combination is [unverified]. It shows how close a free app already gets, and if it's enough, you can skip this build.
 
-*Fast voice samples, saved to `Music/LanternVoiceTest` on your phone on 2026-11-07.* Done: on 2026-11-08 you chose Supertonic voices B and A and rated the rest lower. How to make more is in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
+*Voice samples, saved to `Music/LanternVoiceTest` on your phone on 2026-11-07 and 2026-11-08.* Done: you chose Phonon's Everly and Trevor over Supertonic and the rest. How to make more is in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
 
-**Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
+**Phase 1: three spikes, throwaway code.** You install Android Studio first. USB debugging is already on, and the Rust and NDK tools for building Phonon are in `.bench/`.
 
 - **Spike 1, engine.** Build Phonon's `libptts_ffi.so` into a test app and generate a full chapter with Everly at 2 to 4 threads. Record RTF and RAM, listen for dropped or garbled words on real chapters, and check how numbers and dates are read. If Phonon can't work inside an app, fall back to Supertonic through sherpa-onnx and count its skipped words.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
@@ -123,7 +123,6 @@ Decisions for you:
 
 Only your phone can answer these:
 
-- Which fast voice you like
 - Whether plugins run correctly in QuickJS on the phone
 - Whether the on-by-default sites answer the phone the way they answered this PC
 - Whether sentence-by-sentence WAV playback has audible gaps

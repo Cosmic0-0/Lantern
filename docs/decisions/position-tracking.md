@@ -5,10 +5,10 @@ A link means I read that source. [unverified] marks something I could not confir
 | Approach | Accuracy | Survives a voice or speed change | Highlight and tap to jump | Verdict |
 |---|---|---|---|---|
 | Scroll percentage, as in [Lumina](../research/reference-review.md) | Low, shifts with layout | Yes, but vaguely | No | Rejected |
-| Time in a chapter audio file | Exact for one voice | No | Needs a timing map | Rejected, breaks the [voice handover](voice-engine.md) |
+| Time in a chapter audio file | Exact for one voice | No | Needs a timing map | Rejected, breaks when you change voice or the audio is regenerated |
 | Paragraph, as in LNReader | Can rewind a minute or more | Yes | Coarse | Rejected |
 | Sentence, stored against the text | Within one sentence | Yes | Yes | Recommended |
-| Word | Exact | Yes | Yes | Later, if ever. Needs word timing that I couldn't confirm sherpa-onnx provides |
+| Word | Exact | Yes | Yes | Later, if ever. Needs word timing that I couldn't confirm Phonon or sherpa-onnx provides |
 
 **Recommendation: the text is the source of truth and audio is a disposable cache.** A position is the chapter ID, sentence index and milliseconds into that sentence. Reading and listening share it.
 

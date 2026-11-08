@@ -69,6 +69,8 @@ These files are in `Music/LanternVoiceTest` on your phone. The texts are in `too
 | `4-Kitten.wav` | Kitten nano v0.8 fp32, `--sid=0`, one sentence at a time, joined with `join.mjs` | `sentences.txt` without quotation marks |
 | `5-Piper.wav` | Piper lessac medium | `passage2.txt` without quotation marks |
 | `6-Kokoro-digits-test.wav` | Kokoro fp32, `--sid=3`, English lexicon only, no Chinese rule files | `passage.txt` |
+| `7-Phonon-default.wav` to `11-Phonon-Trevor.wav` | Phonon 31M q8 on the laptop: default voice, Everly, Hadley, Miles and Trevor. Added 2026-11-08 | `passage.txt` |
+| `12-Phonon-Everly-made-on-phone.wav`, `13-Phonon-Trevor-made-on-phone.wav` | Phonon 31M q8, 4 threads, made on the phone. Added 2026-11-08 | `passage.txt` |
 
 `passage.txt` writes numbers as digits, and the other two texts spell them out. Sample 6 tests whether the Chinese-sounding numbers are gone, and nobody has checked it by ear yet. Piper and Kitten skip the word "her" in their samples, and sample 6 may skip words too, as described in [TTS engine](../decisions/voice-engine.md).
 

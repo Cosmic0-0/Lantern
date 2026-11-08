@@ -8,6 +8,7 @@ Costs assume a chapter of 20,000 characters, about 20 minutes of audio [estimate
 |---|---|---|---|---|---|
 | Android system TTS | Probably the voices you already dislike [unverified] | $0 | Depends on voice | Instant | Fine. [Highlight timing](https://developer.android.com/reference/android/speech/tts/UtteranceProgressListener) only comes if the engine supplies it |
 | Kokoro v1.0 fp32 | Best free candidate. [Apache-2.0](https://huggingface.co/hexgrad/Kokoro-82M), [28 English voices](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md), `af_heart` graded A by its author | $0 | Yes | 6.3 s to load, then the wait below | Measured RTF about 1.23 and 874 MB of RAM once loaded. [About 350 MB](https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/kokoro.html) of files |
+| Phonon 31M English q8 | Your choice, picked by ear on 2026-11-08. Apache-2.0, about 100 voices. Ranks above Kokoro on the [Artificial Analysis arena](https://artificialanalysis.ai/text-to-speech/leaderboard?open_weights=true) | $0 | Yes | 0.4 s first audio | Measured RTF 0.33 to 0.43. 64.5 MB, plus 256 KB per voice. Not through sherpa-onnx |
 | Supertonic 3 int8 | Vendor claims only, needs your ears. OpenRAIL-M license, fine for personal use | $0 | Yes | Under 1 s | Emulator RTF 0.20, 129 MB |
 | Kitten nano v0.8 fp32 | Needs your ears. Fewest word errors of the English models in the benchmark. Apache-2.0 | $0 | Yes | Under 1 s | Emulator RTF 0.09, 64 MB |
 | Piper medium | Usually rated less natural [unverified]. More word errors in the tested voice | $0 | Yes | Fastest | Emulator RTF 0.05, 82 MB |
@@ -40,9 +41,9 @@ On your phone it measured RTF 0.59 to 0.61, so it builds a lead while you listen
 
 ## Engine
 
-**Recommendation: on-device only, through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx).** It is Apache-2.0, ships Android and Windows builds, and runs all of these models through one API. Use Kokoro v1.0 as the great voice and pick the fast voice by ear if you need one.
+**Recommendation: on-device only.** Phonon runs through its own runtime, as described [above](#your-choice). [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) is the fallback: it is Apache-2.0, ships Android and Windows builds, and runs Kokoro, Supertonic, Kitten and Piper through one API.
 
-Four details matter:
+Four details matter if Lantern falls back to sherpa-onnx:
 
 - Avoid Kokoro v1.1 for English. It [drops most English voices](https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh).
 - Default to fp32. On a Pixel 10 Pro [it was faster than int8](https://github.com/k2-fsa/sherpa-onnx/issues/3754), 0.48 to 0.51 against 0.62, and int8 sometimes produced garbage audio. A [fix merged on 2026-10-26](https://github.com/k2-fsa/sherpa-onnx/pull/4087), so int8 is worth retesting.
@@ -50,6 +51,8 @@ Four details matter:
 - Leave out the Chinese rule files. The demo app is built with `number-zh.fst`, `date-zh.fst` and `phone-zh.fst`, and the engine [runs them on the text](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/csrc/offline-tts-kokoro-impl.h) before speaking, which fits the Chinese-sounding numbers you heard. Lantern would load English only and turn numbers into English words itself in `core`, so "Chapter 42" becomes "Chapter forty-two". [Spike 1](../../PLAN.md#roadmap) tests this.
 
 ## Kokoro's wait against your 2-minute limit
+
+This section and the next two are the record of why Kokoro was ruled out. Phonon doesn't wait, so none of it applies now.
 
 The measurements from your phone are in [Voice tests](../research/voice-tests.md#measured-on-your-phone).
 
@@ -79,8 +82,8 @@ These figures may be off in both directions. The later command-line runs in [Voi
 | Laptop generates Kokoro and sends it to the phone | None if prepared | Medium, and the laptop must be on | Later option |
 | Cloud voices | Seconds | Accounts and internet | Rejected, see [the engine table](#tts-engine) |
 
-**Unknown words are a new risk.** sherpa-onnx 2.0 removed espeak-ng and looks words up in a lexicon. Unknown words are skipped silently. On my passage the tool skipped any word touching a quotation mark, plus "Kael", "Sealed", "wanted", "opens" and "minutes" with Kokoro, and "her" with Piper and Kitten. Light novels are full of invented names, so this could drop words without warning. Supertonic uses no lexicon, so it shouldn't have this problem, but I didn't check its logs for skipped words. The demo app you tried is the older 1.12.21 with espeak-ng data. [Spike 1](../../PLAN.md#roadmap) must count skipped words on real chapters, strip quotation marks first, and compare 2.0 with the older version. Kitten also crashed on the whole passage, so it needs one sentence at a time.
+**Unknown words are a risk with sherpa-onnx.** Phonon reads raw text through its own tokenizer, so this applies only to the fallback, but [Spike 1](../../PLAN.md#roadmap) still listens for dropped words. sherpa-onnx 2.0 removed espeak-ng and looks words up in a lexicon. Unknown words are skipped silently. On my passage the tool skipped any word touching a quotation mark, plus "Kael", "Sealed", "wanted", "opens" and "minutes" with Kokoro, and "her" with Piper and Kitten. Light novels are full of invented names, so this could drop words without warning. Supertonic uses no lexicon, so it shouldn't have this problem, but I didn't check its logs for skipped words. The demo app you tried is the older 1.12.21 with espeak-ng data. [Spike 1](../../PLAN.md#roadmap) must count skipped words on real chapters, strip quotation marks first, and compare 2.0 with the older version. Kitten also crashed on the whole passage, so it needs one sentence at a time.
 
-**How the handover works.** Each sentence plays the best audio available for it. Kokoro starts generating at the calculated point ahead of you, and when playback reaches it, the voice changes at that sentence boundary. Position is stored against the text, so the swap can't lose your place. Running both engines slows Kokoro and adds to its 874 MB of RAM, and Android 17 adds [RAM-based app memory limits](https://developer.android.com/about/versions/17/behavior-changes-all), so [Spike 1](../../PLAN.md#roadmap) tests this too.
+**How the handover would have worked.** It's dropped with Kokoro. Each sentence plays the best audio available for it. Kokoro starts generating at the calculated point ahead of you, and when playback reaches it, the voice changes at that sentence boundary. Position is stored against the text, so the swap can't lose your place. Running both engines slows Kokoro and adds to its 874 MB of RAM, and Android 17 adds [RAM-based app memory limits](https://developer.android.com/about/versions/17/behavior-changes-all), so [Spike 1](../../PLAN.md#roadmap) tests this too.
 
-**Loading one chapter ahead.** When a chapter starts, Lantern fetches the next chapter's text. Once the current chapter's audio is finished, it generates the next chapter's audio. Nothing beyond that is fetched or generated. Audio is 2.88 MB a minute at 24 kHz, about 58 MB per 20-minute chapter, and only the current and next chapters stay on disk.
+**Loading one chapter ahead.** When a chapter starts, Lantern fetches the next chapter's text. Once the current chapter's audio is finished, it generates the next chapter's audio. Nothing beyond that is fetched or generated. Phonon's audio is 24 kHz, so 2.88 MB a minute as WAV, about 58 MB per 20-minute chapter, and only the current and next chapters stay on disk.
