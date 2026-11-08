@@ -16,6 +16,10 @@ Measured on your phone on 2026-11-07, with the sherpa-onnx demo at its default 4
 
 My earlier estimate of 0.6 to 0.9 was too optimistic. This is one short run, and heat and battery use over a whole chapter are still unmeasured.
 
+## Measured on your laptop
+
+CPU timings from 2026-11-08 are in [Laptop precompute](../decisions/laptop-precompute.md#laptop-speed-measured-2026-11-08). The laptop CPU ran Supertonic at RTF 0.20 and Kokoro at 0.48, about 3 times faster than the phone.
+
 ## Kokoro test, done 2026-11-07
 
 RTF about 1.23, with the results under [Measured on your phone](#measured-on-your-phone). The [demo app](https://huggingface.co/csukuangfj/sherpa-onnx-apk/resolve/main/tts-new/1.12.21/sherpa-onnx-1.12.21-arm64-v8a-zh_en-tts-kokoro-multi-lang-v1_0.apk) had to go on over USB. The copy downloaded on the phone had the right size but the wrong contents, and the phone's log showed failure `-103`, "SHA-256 digest of contents did not verify". Lantern must verify a checksum after downloading any voice model.
