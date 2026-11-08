@@ -14,7 +14,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 
 1. ~~Choose a voice setup.~~ Done 2026-11-08: Phonon 31M with voices Everly and Trevor, which you preferred to Supertonic and which ran faster on the phone. See [TTS engine](docs/decisions/voice-engine.md#your-choice).
 2. ~~Decide on the laptop precompute idea.~~ Done 2026-11-08: it becomes [version 2](docs/decisions/laptop-precompute.md), and version 1 is the phone app alone.
-3. Check that samples 12 and 13 in `Music/LanternVoiceTest`, made on the phone, sound as good as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
+3. ~~Check the phone-made Phonon samples.~~ Done 2026-11-08: samples 12 and 13, made on the phone, sound the same to you as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
 4. You answer the rest of the [open questions](#open-questions).
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
 6. You approve the plan, then Phase 1 starts.
