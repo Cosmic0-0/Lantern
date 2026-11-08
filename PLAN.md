@@ -14,7 +14,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 
 1. ~~Choose a voice setup.~~ Done 2026-11-08: Supertonic 3 alone, see [TTS engine](docs/decisions/voice-engine.md#your-choice).
 2. ~~Decide on the laptop precompute idea.~~ Done 2026-11-08: it becomes [version 2](docs/decisions/laptop-precompute.md), and version 1 is the phone app alone.
-3. Optional before Phase 1: listen to a Phonon sample on the phone, since it's new and may beat Supertonic. See [Laptop precompute](docs/decisions/laptop-precompute.md#bigger-model-candidates). Installing its runtime on the laptop was blocked by a permission check and needs your approval.
+3. Optional before Phase 1: listen to a Phonon sample, since it's new and may beat Supertonic. Running it on the phone needs a source build, so the sample would be made on the laptop. See [Phonon, checked 2026-11-08](docs/decisions/laptop-precompute.md#phonon-checked-2026-11-08). Phone precompute was reviewed on 2026-11-08 and [deferred](docs/decisions/laptop-precompute.md#phone-precompute-not-now).
 4. You answer the rest of the [open questions](#open-questions).
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
 6. You approve the plan, then Phase 1 starts.
