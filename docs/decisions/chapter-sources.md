@@ -27,7 +27,7 @@ I checked your example. "Ode of the Brave" is on AllNovelFull, with chapter link
 
 - One search request per enabled site, on submit and never per keystroke
 - Chapter lists are fetched only when you add or open a book
-- Chapter text is fetched for the current and next chapter only, with no background crawling. The exception is a batch you start on the laptop in [version 2](laptop-precompute.md), which is throttled
+- Chapter text is fetched for the current and next chapter only, with no background crawling. If the [laptop app](laptop-precompute.md) ever returns, batches you start there would be exempt and throttled
 - Each plugin can only reach its own site, and has no file access
 - Plugin code ships inside the app after I read it. Nothing is downloaded and run later
 - A challenge page stops the request and tells you. Lantern never solves or evades one

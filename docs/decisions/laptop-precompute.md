@@ -1,23 +1,28 @@
-# Laptop precompute, version 2
+# Laptop precompute
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
-## What you decided on 2026-11-08
+## Status: dropped for now, 2026-11-08
 
-- **Version 1 is the phone app alone.** Everything in [PLAN.md](../../PLAN.md) up to Phase 4 is version 1.
-- **Version 2 adds a laptop app** that generates audio for batches of chapters with a bigger, better-sounding model, then loads it onto the phone over USB. The phone plays that audio when it's there and falls back to Supertonic when it isn't.
-- **The laptop uses a different, bigger model,** not Supertonic at more steps.
-- **Laptop batches are exempt from the one-chapter-ahead limit.** You start each batch yourself to precompute chapters, so it isn't the background crawling that limit exists to prevent. Batch fetches are throttled. The phone keeps the limit.
+You dropped the laptop app on 2026-11-08. Lantern is the phone app alone. The idea stays open for the future, if a model comes out that sounds clearly better than Phonon and fits this laptop.
 
-## Why it's version 2 and not the MVP
+**Why:** the only model tested that ranks clearly above Phonon and might fit was Ming-3.0-tts 0.5B, and it doesn't fit the RTX 3050's 4 GB. On 2026-11-08 it filled 3.9 GB of VRAM, ran the GPU at 100% while drawing only 26 W, and took about 2 seconds per decoding step. The first short chunk of the test passage took about 100 s, which points to RTF well above 5. The run was stopped before finishing, so there's no exact figure and no sample. Everything else that fits ranks below Phonon, so the laptop had no better voice to offer. Untried ways to fit Ming are loading it in bf16 and its community GGUF build, listed under [Bigger model candidates](#bigger-model-candidates).
 
-Supertonic keeps up on the phone on its own, at RTF about 0.6. The laptop only adds sound quality, plus some battery saved on the phone. That doesn't block daily use, so it waits until version 1 works.
+**What was decided while it was planned, kept in case it returns:**
+
+- The laptop would use a bigger, better-sounding model than the phone's.
+- Batches you start on the laptop would be exempt from the one-chapter-ahead limit, with throttled fetches, because you start each one yourself.
+- Transfer would be over USB through `adb`.
+
+## Why it waited for version 1
+
+The phone's voice keeps up on its own. The laptop would only add sound quality, so it never blocked daily use.
 
 ## How it fits the existing design
 
-[Position tracking](position-tracking.md) already treats the text as the source of truth and audio as a disposable cache, so precomputed chapters are cache entries in another voice. Your place is stored against sentences, so switching between laptop audio and Supertonic can't lose it.
+[Position tracking](position-tracking.md) already treats the text as the source of truth and audio as a disposable cache, so precomputed chapters are cache entries in another voice. Your place is stored against sentences, so switching between laptop audio and the phone's voice can't lose it.
 
-The design sketch, to be settled when version 2 starts:
+The design sketch, if the idea returns:
 
 - **A chapter package** holds the chapter text, its sentence list, the audio and a map of where each sentence starts in the audio. The phone uses the package's text for that chapter, so the sentence numbers can't drift if the site edits the chapter later.
 - **Shared `core`.** Sentence splitting and number reading must give identical results on both devices, so the laptop reuses the Kotlin `core` module and the site plugins.
@@ -27,7 +32,7 @@ The design sketch, to be settled when version 2 starts:
 
 ## What version 1 does to stay ready
 
-These cost almost nothing in the MVP and avoid reworking the phone app later:
+These cost almost nothing in the MVP and keep the door open:
 
 - Each chapter keeps its own sentence list, which the `sentence` table already does.
 - Cached audio is keyed by the chapter text's hash and the voice that made it.
@@ -59,7 +64,7 @@ Rankings come from the [Artificial Analysis speech arena](https://artificialanal
 | Fish Audio S2 Pro | 1108 | 5B | Research license | No |
 | Kokoro v1.0 | 1064 | 82M | Apache-2.0 | Yes, measured above |
 
-**Ming-3.0-tts 0.5B is the lead candidate** for version 2: the highest-ranked model that plausibly fits a laptop GPU, with a permissive license. Breeze TTS 2 is unlikely, because the 3050 has 4 GB of VRAM and its weights are 7.7 GB.
+**Ming-3.0-tts 0.5B was the lead candidate:** the highest-ranked model that plausibly fit a laptop GPU, with a permissive license. In full precision it didn't fit the 4 GB 3050, as described [above](#status-dropped-for-now-2026-11-08). Breeze TTS 2's weights are 7.7 GB, so it can't fit either.
 
 **Phonon may matter for version 1.** It is tiny, ranks above Kokoro, and ships an [Android guide](https://huggingface.co/gradium/phonon-31m-en). It came out on 2026-10-20, after the phone voice tests. Whether it sounds better than Supertonic needs a phone sample.
 
@@ -88,4 +93,4 @@ Laptop CPU timings, one run each: RTF 0.19 to 0.22 across five voices, first aud
 
 ## Still open
 
-- A listening test of Ming samples made on the laptop GPU.
+- Nothing while the idea is dropped. If it returns, try Ming in bf16 or its GGUF build, or whatever newer model beats Phonon, and compare samples by ear first.

@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: second draft for your approval, updated 2026-11-08 with your voice choice and the version 2 laptop plan. Lantern itself isn't built yet.
+Status: second draft for your approval, updated 2026-11-08 with your voice choice. The laptop app is dropped for now. Lantern itself isn't built yet.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -13,7 +13,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 **Next steps, in order:**
 
 1. ~~Choose a voice setup.~~ Done 2026-11-08: Phonon 31M with voices Everly and Trevor, which you preferred to Supertonic and which ran faster on the phone. See [TTS engine](docs/decisions/voice-engine.md#your-choice).
-2. ~~Decide on the laptop precompute idea.~~ Done 2026-11-08: it becomes [version 2](docs/decisions/laptop-precompute.md), and version 1 is the phone app alone.
+2. ~~Decide on the laptop precompute idea.~~ Dropped 2026-11-08, because no better model than Phonon fits the laptop's 4 GB GPU. It may return if better models come out. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 3. ~~Check the phone-made Phonon samples.~~ Done 2026-11-08: samples 12 and 13, made on the phone, sound the same to you as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
 4. You answer the rest of the [open questions](#open-questions).
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
@@ -22,7 +22,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 **Current setup:**
 
 - All commits are on `master`. There is no `main` branch. Ask before every push.
-- The laptop has no Android Studio, JDK or `adb` installed. For USB work, download [Platform Tools](https://dl.google.com/android/repository/platform-tools-latest-windows.zip) to a temporary folder.
+- The laptop has no Android Studio or JDK. `adb`, Rust, the Android NDK and the Phonon build are in the gitignored `.bench/` folder, about 4 GB, which can be deleted when no longer needed.
 - The phone has USB debugging on and the Kokoro demo app installed. The test tool and voice models I pushed to it have been removed.
 - Test scripts and raw results are in `tools/`.
 
@@ -30,14 +30,14 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 
 You read light novels in a browser and often want to listen instead. Site TTS sounds bad and loses your place when you pause, switch apps or come back later. You also don't want to hunt across sites for a title or its chapters.
 
-Lantern is a personal Android app. You search for any novel by title, add it to your library, browse all its chapters, then read or listen. It runs on a Galaxy A26 (SM-A266B/DS) first and a Windows 11 laptop later, at no cost.
+Lantern is a personal Android app. You search for any novel by title, add it to your library, browse all its chapters, then read or listen. It runs on a Galaxy A26 (SM-A266B/DS), at no cost.
 
 Your answers set these constraints:
 
 - Budget is zero.
 - You use whatever site has the novel for free, so Lantern needs its own list of sites.
-- Only one chapter past the current one gets loaded ahead on the phone, no more. Batches you start on the laptop in version 2 are exempt and throttled.
-- The laptop is occasional and can wait. Version 1 is the phone app alone, and the laptop comes in version 2.
+- Only one chapter past the current one gets loaded ahead, no more.
+- Lantern is the phone app alone. A laptop app is dropped for now and may return if better voice models come out.
 - Battery and heat aren't tuned or measured in version 1, as long as Lantern never runs the phone flat out. If it overheats, optimizing comes then. Decided 2026-11-08.
 - A Kokoro wait under 2 minutes is acceptable. Above that, a fast voice plays first and hands over to Kokoro mid-chapter.
 
@@ -51,7 +51,7 @@ The recommended path needs no account, login or backend. The only option that wo
 - Decision 2, [TTS engine](docs/decisions/voice-engine.md): on-device only, with Phonon's own runtime on the phone and sherpa-onnx as the fallback.
 - Decision 3, [finding and loading chapters](docs/decisions/chapter-sources.md): LNReader plugins, run inside Lantern.
 - Decision 4, [position tracking](docs/decisions/position-tracking.md): the text is the source of truth and audio is a disposable cache.
-- Decision 5, [laptop precompute](docs/decisions/laptop-precompute.md): version 2 adds a laptop app that generates chapters with a bigger model and loads them onto the phone over USB.
+- Decision 5, [laptop precompute](docs/decisions/laptop-precompute.md): dropped for now. A future laptop app could generate chapters with a bigger model and load them onto the phone over USB.
 
 ## Research
 
@@ -85,11 +85,9 @@ The smallest version I think you would use daily: search a title, add it, press 
 - Generation never runs the phone flat out: at most 4 threads, and at most one chapter ahead.
 - A real chapter from each enabled site keeps all its short dialogue lines.
 
-**Data, stored in SQLite through Room:** `source`, `book`, `chapter` (text fetched on demand), `sentence`, `position`, `position_history` and `audio_cache`. Cached audio is keyed by the chapter text's hash and the voice, so [version 2](docs/decisions/laptop-precompute.md#what-version-1-does-to-stay-ready) can add laptop audio without reworking this.
+**Data, stored in SQLite through Room:** `source`, `book`, `chapter` (text fetched on demand), `sentence`, `position`, `position_history` and `audio_cache`. Cached audio is keyed by the chapter text's hash and the voice, which keeps the [laptop idea](docs/decisions/laptop-precompute.md#what-version-1-does-to-stay-ready) possible later.
 
 ## Roadmap
-
-Phases 0 to 4 are version 1, the phone app alone.
 
 **Phase 0: phone tests with no code.** No PC needed.
 
@@ -111,11 +109,7 @@ Phases 0 to 4 are version 1, the phone app alone.
 
 **Phase 4: more sources.** The visible in-app browser for blocked sites like Scribble Hub, share-from-browser with Mozilla's [Readability](https://github.com/mozilla/readability) for anything else, updating plugins from inside the app after review, and EPUB import for DRM-free files.
 
-**Version 2: laptop precompute.** A small Compose Desktop app on Windows, reusing `core`, the plugins and the sherpa-onnx Windows build. It generates batches of chapters with a bigger model and pushes them to the phone over USB, and the phone plays them when present. Design and model candidates are in [Laptop precompute](docs/decisions/laptop-precompute.md).
-
-**Version 2, later:** reading on the laptop, and sharing your place through file export first, then direct phone-to-laptop sync on the same Wi-Fi. Neither needs a server.
-
-**Maybe later:** different voices for dialogue and narration, and word-level highlighting.
+**Maybe later:** different voices for dialogue and narration, word-level highlighting, and a laptop app. The laptop app could generate chapters with a better model than the phone can run, if one comes out that fits the laptop, or offer reading on the laptop with your place synced from the phone. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 
 ## Open questions
 
@@ -125,7 +119,7 @@ Decisions for you:
 2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
 3. **English only?** I assumed yes. Other languages would change the voice comparison.
 4. ~~Which voice setup?~~ Answered 2026-11-08: Phonon 31M, voices Everly and Trevor.
-5. ~~Laptop precompute?~~ Answered 2026-11-08: version 2, with a bigger model and throttled batches. See [Laptop precompute](docs/decisions/laptop-precompute.md).
+5. ~~Laptop precompute?~~ Answered 2026-11-08: dropped for now, kept as a future possibility. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 
 Only your phone can answer these:
 
