@@ -19,6 +19,14 @@ Costs assume a chapter of 20,000 characters, about 20 minutes of audio [estimate
 | OpenAI | High [unverified by ear] | [About $0.015 a minute](https://developers.openai.com/api/docs/models/gpt-4o-mini-tts), about $0.30 [secondary sources]. No recurring free tier | No | Network | Fine |
 | edge-tts | High | $0, unofficial | No | Network | An add-on author says [Microsoft blocked browser clients in December 2025](https://addons.mozilla.org/firefox/addon/edge-tts/). Too fragile to build on |
 
+## Your choice
+
+On 2026-11-08 you listened to the [samples](../research/voice-tests.md#fast-voice-samples) and chose Supertonic 3 int8 at 5 steps, voice B (`--sid=0`, female) or voice A (`--sid=5`, male). You rated Kitten, Piper, Supertonic at 3 steps and the Kokoro digits test lower. Lantern ships Supertonic alone, with both voices in settings, so the Kokoro handover, the fast-voice fallback and preparing chapters while charging are dropped from the MVP. The Kokoro sections below are kept as the record of why.
+
+On your phone it measured RTF 0.59 to 0.61, so it builds a lead while you listen and only falls behind above about 1.6x playback speed. It reads slower than Kokoro, about 800 characters a minute against 1,300, so a 10,000 to 13,000 character chapter runs about 12 to 16 minutes and takes about 7 to 10 minutes to generate in the background [estimate]. Supertonic uses no lexicon, but its logs weren't checked for skipped words, so [Spike 1](../../PLAN.md#roadmap) still counts them.
+
+## Engine
+
 **Recommendation: on-device only, through [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx).** It is Apache-2.0, ships Android and Windows builds, and runs all of these models through one API. Use Kokoro v1.0 as the great voice and pick the fast voice by ear if you need one.
 
 Four details matter:

@@ -1,21 +1,22 @@
 # Lantern plan
 
-Status: second draft for your approval, updated 2026-11-07 with measurements from your phone. Lantern itself isn't built yet.
+Status: second draft for your approval, updated 2026-11-08 with your voice choice. Lantern itself isn't built yet.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
 ## Where things stand
 
-Start here when picking this up in a new chat. Last updated 2026-11-07.
+Start here when picking this up in a new chat. Last updated 2026-11-08.
 
 The plan, reference review, site tests and phone voice tests are done. No app code exists, and you haven't approved the plan yet, so nothing gets built until you do.
 
 **Next steps, in order:**
 
-1. You listen to the samples in `Music/LanternVoiceTest` on your phone and choose a voice setup. You've said Kokoro's voice is good enough but too slow, and you haven't heard the fast voices yet. Their settings are in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
-2. You answer the rest of the [open questions](#open-questions).
-3. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
-4. You approve the plan, then Phase 1 starts.
+1. ~~Choose a voice setup.~~ Done 2026-11-08: Supertonic 3 alone, see [TTS engine](docs/decisions/voice-engine.md#your-choice).
+2. Decide on the laptop precompute idea, under [open questions](#open-questions). Its go/no-go is a listening test of laptop-made audio against the phone's, which needs the sherpa-onnx tool run on the laptop. Running the downloaded tool was blocked by a permission check on 2026-11-08 and needs your approval.
+3. You answer the rest of the [open questions](#open-questions).
+4. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
+5. You approve the plan, then Phase 1 starts.
 
 **Current setup:**
 
@@ -64,7 +65,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 1. In-app title search across the on-by-default sites.
 2. "Add to library", a library screen and a full chapter list for each book.
 3. A reader view with sentence highlight, follow mode, tap to jump and "Back to voice".
-4. On-device speech in the voice setup you choose from the samples, either Supertonic alone or Kokoro with a fast voice and preparation while charging.
+4. On-device speech with Supertonic 3 int8 at 5 steps, with voice B (`--sid=0`, female) and voice A (`--sid=5`, male) in settings. Both come in the same model download.
 5. Screen-off playback with lock-screen and notification controls.
 6. Position saving, resume and the undo list, shared by reading and listening.
 7. Auto-advance, with only the next chapter loaded ahead.
@@ -91,11 +92,11 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 *Baseline test.* Install [LNReader](https://www.lnreader.app/releases), [add a plugin repository](https://www.lnreader.app/plugins), and try Kokoro as the system voice through the [sherpa-onnx engine APK](https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine.html). That combination is [unverified]. It shows how close a free app already gets, and if it's enough, you can skip this build.
 
-*Fast voice samples, saved to `Music/LanternVoiceTest` on your phone on 2026-11-07.* Your choice from these sets the voice setup. How to make more is in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
+*Fast voice samples, saved to `Music/LanternVoiceTest` on your phone on 2026-11-07.* Done: on 2026-11-08 you chose Supertonic voices B and A and rated the rest lower. How to make more is in [Voice tests](docs/research/voice-tests.md#fast-voice-samples).
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
 
-- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF, heat, battery and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English. Test both voices together only if you choose the handover.
+- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF, heat, battery and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the [site tests](docs/research/site-tests.md) through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
@@ -116,7 +117,8 @@ Decisions for you:
 1. **Is the [default site list](docs/research/site-tests.md) OK?** I recommend leaving sites that object off by default. You can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
 2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
 3. **English only?** I assumed yes. Other languages would change the voice comparison.
-4. **Which voice setup?** Listen to `Music/LanternVoiceTest` on your phone. If Supertonic sounds good enough, I recommend it alone, which removes the handover and chapter preparation. If only Kokoro will do, Lantern needs both.
+4. ~~Which voice setup?~~ Answered 2026-11-08: Supertonic 3 alone, voices B and A.
+5. **Laptop precompute?** Your idea from 2026-11-08: the laptop generates higher-quality audio for batches of chapters and loads it onto the phone over USB, and the phone plays it when present. Under evaluation. It only pays off if laptop audio sounds clearly better than the phone's, so a listening test decides it before any design work. Batches would also break the one-chapter-ahead fetch limit, so that limit needs your decision.
 
 Only your phone can answer these:
 
