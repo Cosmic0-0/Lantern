@@ -38,6 +38,7 @@ Your answers set these constraints:
 - You use whatever site has the novel for free, so Lantern needs its own list of sites.
 - Only one chapter past the current one gets loaded ahead on the phone, no more. Batches you start on the laptop in version 2 are exempt and throttled.
 - The laptop is occasional and can wait. Version 1 is the phone app alone, and the laptop comes in version 2.
+- Battery and heat aren't tuned or measured in version 1, as long as Lantern never runs the phone flat out. If it overheats, optimizing comes then. Decided 2026-11-08.
 - A Kokoro wait under 2 minutes is acceptable. Above that, a fast voice plays first and hands over to Kokoro mid-chapter.
 
 "Never loses my place" needs a test, so this is the definition I propose: after a pause, app switch, phone call, Bluetooth drop, force stop or reboot, playback resumes within one sentence of where the audio stopped.
@@ -81,7 +82,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 - Searching "Ode of the Brave" finds it, and you can add it and open chapter 1.
 - Three chapters in a row play with the screen off.
 - Resume lands within one sentence after each of these: pause, app switch, phone call, Bluetooth drop, `adb` kill, force stop and reboot.
-- Battery and heat over those three chapters are measured and acceptable to you.
+- Generation never runs the phone flat out: at most 4 threads, and at most one chapter ahead.
 - A real chapter from each enabled site keeps all its short dialogue lines.
 
 **Data, stored in SQLite through Room:** `source`, `book`, `chapter` (text fetched on demand), `sentence`, `position`, `position_history` and `audio_cache`. Cached audio is keyed by the chapter text's hash and the voice, so [version 2](docs/decisions/laptop-precompute.md#what-version-1-does-to-stay-ready) can add laptop audio without reworking this.
@@ -100,7 +101,7 @@ Phases 0 to 4 are version 1, the phone app alone.
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio and turn on USB debugging first.
 
-- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF, heat, battery and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English.
+- **Spike 1, engine.** Generate a full chapter with the voice you chose, at 4 threads on any cores, from inside an app. Record RTF and RAM, and count skipped words on real chapters on sherpa-onnx 2.0 and the older version. Check that numbers and dates are read in English.
 - **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the [site tests](docs/research/site-tests.md) through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
@@ -128,7 +129,6 @@ Decisions for you:
 
 Only your phone can answer these:
 
-- Kokoro's speed, heat and battery use over a whole chapter
 - Which fast voice you like
 - Whether plugins run correctly in QuickJS on the phone
 - Whether the on-by-default sites answer the phone the way they answered this PC

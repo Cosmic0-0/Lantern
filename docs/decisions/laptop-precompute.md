@@ -63,27 +63,30 @@ Rankings come from the [Artificial Analysis speech arena](https://artificialanal
 
 **Phonon may matter for version 1.** It is tiny, ranks above Kokoro, and ships an [Android guide](https://huggingface.co/gradium/phonon-31m-en). It came out on 2026-10-20, after the phone voice tests. Whether it sounds better than Supertonic needs a phone sample.
 
-## Phone precompute: not now
+## Phone precompute: dropped
 
-On 2026-11-08 you asked whether the phone should also precompute batches of chapters. A five-advisor review said no, four to one, and I agree:
+On 2026-11-08 you asked whether the phone should also precompute batches of chapters. A five-advisor review said no, four to one, and you dropped the idea the same day. The reasons:
 
 - Supertonic at RTF 0.6 already stays ahead of playback. The only gap is the first-audio wait, an estimated 3 to 10 seconds, and generating the next chapter's opening sentences while the current one plays closes it with no job queue.
 - The quality case needs a slower phone model that beats Supertonic by ear, and none has yet. Ming can't run on the phone, and Kokoro at RTF 1.3 for hours would heat a charging Exynos 1380 that hasn't been heat-tested.
 - Keeping an overnight queue alive on One UI takes a foreground service, battery exemptions, retries and resume. That is the hardest code in the app, for a gain nobody has measured.
 - The sentence-keyed audio cache means adding it later needs no redesign, so waiting costs little.
 
-**Revisit if both hold:** you're often away from the laptop for long stretches, and a phone model clearly beats Supertonic in a listening test. If full-chapter heat turns out bad first, the smaller fix is a "prepare this chapter now" button that you start, running in the foreground and writing into the same cache.
-
-The council's first step, and the one measurement that decides whether any of this has a job to do, is playing a full chapter of Supertonic on the A26 while logging battery, temperature and first-audio time over `adb`.
+If heat ever becomes a problem, the smaller fix is a "prepare this chapter now" button that you start, running in the foreground and writing into the same cache.
 
 ## Phonon, checked 2026-11-08
 
+**You prefer it to Supertonic.** On 2026-11-08 you listened to samples 7 to 11 in `Music/LanternVoiceTest`, made on the laptop with ptts v0.6.0, `--quant q8`, from `tools/voice-test/passage.txt`. You liked Everly (8) for a female voice and Trevor (11) for a male voice, and found the default voice (7) not bad. Phonon replaces Supertonic in version 1 if it is fast enough on the phone.
+
+Laptop CPU timings, one run each: RTF 0.19 to 0.22 across five voices, first audio after about 0.2 s, and 63 to 68 s of audio for the passage against Supertonic's 70 s.
+
 - **On the phone, it needs a source build.** The [Android guide](https://github.com/gradium-ai/xn-ptts/blob/main/android/README.md) offers no APK and no Gradle package. The library is built with Rust, `cargo-ndk` and the Android NDK, and the system-voice engine app is also built from source. It supports arm64 with dotprod and fp16, which the A26's Exynos 1380 has [unverified].
-- **On Windows, a prebuilt CPU binary exists.** [ptts v0.6.0](https://github.com/gradium-ai/xn-ptts/releases/tag/v0.6.0) for Windows x64 verified against its `SHA256SUMS`. CUDA needs a source build. Running it here was blocked by a permission check, so no sample or timing exists yet.
-- **It reads numbers itself.** `--lang en` turns numbers, amounts, emails and addresses into words before speaking, which `core` would otherwise have to do for sherpa-onnx.
+- **On Windows, a prebuilt CPU binary exists.** [ptts v0.6.0](https://github.com/gradium-ai/xn-ptts/releases/tag/v0.6.0) for Windows x64 verified against its `SHA256SUMS`. CUDA needs a source build.
+- **It reads numbers itself, partly.** `--lang en` rewrites numbers, amounts, emails and addresses before speaking. On the test passage it turned 1024 into "1 thousand 24" and left 317 as digits, so check by ear how numbers come out.
+- **The phone build works.** On 2026-11-08 the ptts v0.6.0 command-line tool cross-compiled for the phone in about 5 minutes with Rust stable, `cargo-ndk`, NDK r28c, API level 28 and `+dotprod,+fp16`.
 - **Speed and pace controls:** `--threads`, and `--condition duration_delta=-0.3` to speak faster.
 
 ## Still open
 
-- A listening test of Ming and Phonon samples made on the laptop. Installing Ming's Python runtime and running Phonon's binary were both blocked by permission checks on 2026-11-08.
-- The RTX 3050's VRAM and speed, which needs the GPU visible to the benchmark.
+- Phonon's speed on the phone, which decides whether it replaces Supertonic.
+- A listening test of Ming samples made on the laptop GPU.
