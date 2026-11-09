@@ -20,7 +20,8 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 6. ~~Approve the plan.~~ Approved 2026-11-09.
 7. ~~Install Android Studio.~~ Done 2026-11-09.
 8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
-9. Spike 2, playback, then Spike 3, sources.
+9. Spike 2, playback: designed 2026-11-09, see [Spike 2](docs/spikes/spike-2-playback.md). Its app in `spikes/playback/` was being written when work paused, and is unreviewed and uncommitted.
+10. Spike 3, sources.
 
 **Current setup:**
 
