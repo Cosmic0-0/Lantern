@@ -25,6 +25,13 @@ internal interface LibraryDao {
     )
     fun books(): Flow<List<Book>>
 
+    @Query(
+        """SELECT id, title, sourceId, coverUrl, lastPlayedAt,
+                  (SELECT COUNT(*) FROM chapter WHERE chapter.bookId = book.id) AS chapterCount
+           FROM book WHERE id = :id""",
+    )
+    suspend fun bookSummary(id: Long): Book?
+
     @Query("SELECT * FROM book WHERE id = :id")
     suspend fun book(id: Long): BookEntity?
 
@@ -89,6 +96,12 @@ internal interface LibraryDao {
 
     @Query("SELECT bookId, chapterId, sentence FROM position ORDER BY savedAt DESC LIMIT 1")
     suspend fun lastPlayed(): Position?
+
+    @Query("SELECT savedAt FROM position WHERE bookId = :bookId")
+    suspend fun savedAt(bookId: Long): Long?
+
+    @Query("SELECT id, bookId, number, title, textHash FROM chapter WHERE bookId = :bookId ORDER BY number LIMIT 1")
+    suspend fun firstChapter(bookId: Long): Chapter?
 
     @Upsert
     suspend fun upsertPosition(position: PositionEntity)

@@ -5,5 +5,9 @@
         <activity
             android:name=".DebugActivity"
             android:exported="true" />
+        <activity
+            android:name=".DebugPlayerActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
     </application>
 </manifest>

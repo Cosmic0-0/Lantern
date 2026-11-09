@@ -85,7 +85,12 @@ class Library(
     /** In chapter order. */
     fun chapters(bookId: Long): Flow<List<Chapter>> = dao.chapters(bookId)
 
+    suspend fun book(bookId: Long): Book? = dao.bookSummary(bookId)
+
     suspend fun chapter(chapterId: Long): Chapter? = dao.chapter(chapterId)
+
+    /** The book's first chapter, where a book with no saved position starts. */
+    suspend fun firstChapter(bookId: Long): Chapter? = dao.firstChapter(bookId)
 
     /** The chapter after this one in its book, or null at the last chapter. */
     suspend fun nextChapter(chapterId: Long): Chapter? = dao.nextChapter(chapterId)
@@ -147,6 +152,9 @@ class Library(
 
     /** The position of the most recently played book, or null. */
     suspend fun lastPlayed(): Position? = dao.lastPlayed()
+
+    /** When the book's position was last saved, for the resume rule, or null if it has none. */
+    suspend fun savedAt(bookId: Long): Long? = dao.savedAt(bookId)
 
     /** Records a jump away from [from] in its book's history: newest first, the last [History.MAX]. */
     suspend fun recordJump(from: Position) {

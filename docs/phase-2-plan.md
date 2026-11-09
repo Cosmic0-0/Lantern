@@ -1,6 +1,6 @@
 # Phase 2 plan: the MVP
 
-Status: approved 2026-11-09. Steps 1 to 6 done 2026-11-09.
+Status: approved 2026-11-09. Steps 1 to 7 done 2026-11-09, apart from the checks only you can do (listed under step 7).
 
 Scope and the "done means" checklist are in [PLAN.md](../PLAN.md#mvp-scope). The module shape is in [Phase 2 architecture](phase-2-architecture.md), terms in [CONTEXT.md](../CONTEXT.md), and the decisions made for this phase are:
 
@@ -94,6 +94,27 @@ The model and both voices as uncompressed assets, copied on first launch with th
   - speed change heard live;
   - a voice change mid-chapter;
   - no ENDED state in the log.
+- **Result, 2026-11-09:** passed from `adb`, driven through a MediaController by the debug-only `DebugPlayerActivity`:
+
+  | Check | Result |
+  |---|---|
+  | Pause | Saved the sentence playing |
+  | `adb` kill | During sentence 6, a media play key resumed at 6 without opening the app |
+  | Force stop | During sentence 8, play resumed at 8 |
+  | Tap to jump | The sentence jumped from went into the history |
+  | Voice change mid-chapter | The first Trevor sentence took 2.1 s to make, then playback carried on |
+  | Speed | Applied live and kept |
+  | Auto-advance with the screen off | Chapter 1 ran into chapter 2, and chapter 3 was fetched with the screen off in 1.5 s, all as a foreground service |
+  | End of the book | "No more chapters yet.", then stopped paused on the last sentence with it saved |
+  | No unexpected end | The only ENDED came after that notice, as intended |
+
+  The model check on a later start (hashing the installed 65 MB) took 201 to 450 ms.
+
+  Two problems found and fixed:
+  - Site texts open with their own heading, so the spoken chapter title was said twice. Now it's spoken only when the text doesn't start with it.
+  - A command that needs a fetch was lost if the asking screen let go of the service before playback began. Now "Loading chapter." is spoken first, which keeps the service in the foreground.
+
+  **Still needs you:** three chapters in a row with the screen off while you listen, Bluetooth headphones off, a reboot, a phone call, and hearing both voices and the speed change yourself. These move to step 9.
 
 ### 8. Screens (`app`)
 
