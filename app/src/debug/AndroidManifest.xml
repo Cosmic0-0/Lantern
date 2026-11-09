@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: the phone-check screens from docs/phase-2-plan.md. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".DebugActivity"
+            android:exported="true" />
+    </application>
+</manifest>

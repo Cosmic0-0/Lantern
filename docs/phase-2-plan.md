@@ -1,6 +1,6 @@
 # Phase 2 plan: the MVP
 
-Status: approved 2026-11-09. Steps 1 to 4 done 2026-11-09.
+Status: approved 2026-11-09. Steps 1 to 6 done 2026-11-09.
 
 Scope and the "done means" checklist are in [PLAN.md](../PLAN.md#mvp-scope). The module shape is in [Phase 2 architecture](phase-2-architecture.md), terms in [CONTEXT.md](../CONTEXT.md), and the decisions made for this phase are:
 
@@ -68,6 +68,7 @@ The Room schema from [Storage](decisions/storage.md) and `Library`: add a listin
 
 - **Tests:** instrumented tests on the phone with an in-memory database and a fake `Sources`: sentences stored once and stable after a refresh, refresh keeps existing chapters, position and history round-trip, pasted text becomes one chapter, delete removes everything.
 - **Phone check:** `connectedDebugAndroidTest` passes on the A26.
+- **Result, 2026-11-09:** 18 instrumented tests pass on the A26. Two first requests for the same chapter share one fetch.
 
 ### 6. Speech and model install (`app`)
 
@@ -75,6 +76,12 @@ The model and both voices as uncompressed assets, copied on first launch with th
 
 - **Tests:** a JVM test for the WAV writer's header. Instrumented: a corrupted copy is replaced on next launch.
 - **Phone check:** a fresh install copies the model, logged with its time. A debug button fetches chapter 1 of Ode of the Brave through `Sources` and `Library` and generates it. The log shows RTF near Spike 1's 0.33 on 2 threads, and you listen to a few sentences in Everly and Trevor.
+- **Result, 2026-11-09:** passed on the A26, from `DebugActivity` (debug builds only).
+  - Model copy on a fresh install: 375 ms. Model load: 396 ms.
+  - Chapter 1: fetched in 1.8 s as 317 sentences.
+  - Generation: 20.5 minutes of audio in 7.1 minutes, RTF 0.345 overall at 2 threads, with no failed sentences.
+  - 21 JVM tests pass. An interrupted sentence leaves no file, so a stop can't cache silence in place of a real sentence.
+  - The listening part moves to step 7, where you hear both voices through the player.
 
 ### 7. Playback service (`app`)
 
