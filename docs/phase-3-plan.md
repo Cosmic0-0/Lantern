@@ -159,6 +159,10 @@ Work:
 - **Review:** `security-review` on the `Http` and `host.js` changes.
 - **Phone check:** search, add and listen to one free chapter.
 - **Go or no-go:** it goes on by default only if the terms don't object and a novel you'd read has a useful number of free chapters. Otherwise it stays off and the reason goes in [Site tests](research/site-tests.md). How many chapters are free per novel is [unverified].
+- **Result, 2026-11-09: no-go, nothing built.**
+  - **The terms forbid it.** The [terms of service](https://www.wuxiaworld.com/terms-of-service) ban "any robot, spider, scraper, crawler, or any automated means to access or extract data from Wuxiaworld without our prior written permission". The only exception is search engine indexing. robots.txt only blocks account pages, but the terms limit it to search engines.
+  - **The plugin itself was clean.** It has no credentials, app ID or impersonation. It reaches `www.wuxiaworld.com/api` and `api2.wuxiaworld.com` (gRPC-web), and marks chapters past the free limit (50 by default) as locked.
+  - **Where it stands now.** Wuxiaworld is listed as off by default in [Site tests](research/site-tests.md). Under [Decision 3](decisions/chapter-sources.md), turning it on would be your choice to accept the risk, and it would need the protobuf work above first.
 
 ### 10. Phase 3 acceptance
 
