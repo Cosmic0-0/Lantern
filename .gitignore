@@ -4,6 +4,10 @@
 # Real chapter texts for local tests: copyrighted, so never committed
 core/src/test/resources/chapters/
 
+# Sources module: the JS bundle is generated (npm ci && npm run build in sources/js)
+sources/js/node_modules/
+sources/src/main/resources/js/
+
 # Gradle and IDE
 build/
 .gradle/
