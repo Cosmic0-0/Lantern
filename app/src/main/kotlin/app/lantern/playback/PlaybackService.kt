@@ -21,7 +21,9 @@ import app.lantern.EventLog
 import app.lantern.core.Position
 import app.lantern.core.Resume
 import app.lantern.lantern
+import app.lantern.core.SpeechRules
 import app.lantern.library.Chapter
+import app.lantern.library.ChapterText
 import app.lantern.model.ModelInstaller
 import app.lantern.speech.Generator
 import app.lantern.speech.SentenceAudio
@@ -45,6 +47,9 @@ import java.io.File
  * chapters yet". The position is saved on every sentence change, pause, task removal and destroy. When a chapter
  * starts, the next one is fetched and appended, so playback runs on with the screen off.
  *
+ * The book's skip rules and pronunciation fixes (docs/decisions/speech-rules.md): skipped sentences get no item, item
+ * addresses use the chapter's audio key, and phrases are spoken through the fixes. RULES_CHANGED rebuilds the playlist.
+ *
  * Runs on the main thread; Library calls suspend in [scope].
  */
 @OptIn(UnstableApi::class)
@@ -64,6 +69,8 @@ class PlaybackService : MediaSessionService() {
     private var notices = listOf<String>()
     private var startJob: Job? = null
     private var nextJob: Job? = null
+    private var rules = SpeechRules(emptyList(), emptyList()) // the playing book's, loaded on every start
+    private var previewReturn: Position? = null // where a preview goes back to, paused
 
     // Sleep timer (docs/decisions/phase-3-assumptions.md). Not saved: a killed service has stopped playing anyway.
     private var sleepAt: Long? = null // when a timed sleep is due, epoch ms
@@ -124,8 +131,8 @@ class PlaybackService : MediaSessionService() {
             // A fetch takes seconds, and a service that isn't playing yet is destroyed as soon as the screen that
             // asked lets go of it. Saying so starts playback at once, which keeps the service in the foreground.
             if (library.chapter(position.chapterId)?.textHash == null) say(LOADING, play)
-            val sentences = try {
-                library.sentences(position.chapterId)
+            val text = try {
+                library.chapterText(position.chapterId)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -133,6 +140,14 @@ class PlaybackService : MediaSessionService() {
                 return@launch say("Couldn't load this chapter.", play)
             }
             val chapter = library.chapter(position.chapterId) ?: return@launch
+            rules = library.rules(book.id)
+            val index = firstUnskipped(text, position.sentence.coerceIn(0, text.sentences.lastIndex))
+            if (index == null) {
+                // Everything from here to the chapter's end is skipped: start the next chapter instead.
+                EventLog.log("START", "nothing to read from sentence ${position.sentence} of chapter ${chapter.id}, moving on")
+                val next = library.nextChapter(chapter.id) ?: return@launch say(NO_MORE_CHAPTERS, play)
+                return@launch startAt(Position(book.id, next.id, 0), play)
+            }
             bookId = book.id
             bookTitle = book.title
             currentChapterId = chapter.id // set before the playlist changes, so its first transition isn't a new chapter
@@ -141,8 +156,8 @@ class PlaybackService : MediaSessionService() {
             titlePhrase = null
             notices = emptyList()
             syncPhrases()
-            val index = position.sentence.coerceIn(0, sentences.lastIndex)
-            player.setMediaItems(itemsFor(chapter, sentences.size, spokenTitle = false), index, 0)
+            val items = itemsFor(chapter, text, spokenTitle = false)
+            player.setMediaItems(items, items.indexOfFirst { it.mediaId == sentenceId(chapter.id, index) }, 0)
             player.prepare()
             player.playWhenReady = play
             generator.update(Position(book.id, chapter.id, index))
@@ -155,28 +170,42 @@ class PlaybackService : MediaSessionService() {
         EventLog.log("CHAPTER", "start ${chapter.id} \"${chapter.title}\" ${EventLog.state(this)}")
         nextJob?.cancel()
         nextJob = scope.launch {
-            val next = library.nextChapter(chapter.id) ?: return@launch appendNotice(NO_MORE_CHAPTERS)
+            var next = library.nextChapter(chapter.id) ?: return@launch appendNotice(NO_MORE_CHAPTERS)
             if (next.id in appended) return@launch
-            for (attempt in 1..MAX_TRIES) {
-                try {
-                    val sentences = library.sentences(next.id)
-                    appendChapter(library.chapter(next.id) ?: return@launch, sentences)
-                    return@launch
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    EventLog.log("NEXT", "fetch of chapter ${next.id} failed, try $attempt of $MAX_TRIES: $e")
-                    if (attempt < MAX_TRIES) delay(RETRY_MS)
+            // A chapter whose every sentence is skipped is passed over, a few at most: a rule that skips everything
+            // shouldn't walk the whole book.
+            repeat(MAX_SKIPPED_CHAPTERS + 1) {
+                val text = fetchWithRetries(next.id) ?: return@launch appendNotice(FETCH_FAILED)
+                if (text.sentences.indices.any { it !in text.skipped }) {
+                    return@launch appendChapter(library.chapter(next.id) ?: return@launch, text)
                 }
+                EventLog.log("NEXT", "chapter ${next.id} is all skipped, moving on")
+                next = library.nextChapter(next.id) ?: return@launch appendNotice(NO_MORE_CHAPTERS)
             }
-            appendNotice(FETCH_FAILED)
+            appendNotice(NOTHING_TO_READ)
         }
     }
 
-    private fun appendChapter(chapter: Chapter, sentences: List<String>) {
+    /** The chapter's text, fetched if needed with retries a minute apart, or null when every try failed. */
+    private suspend fun fetchWithRetries(chapterId: Long): ChapterText? {
+        for (attempt in 1..MAX_TRIES) {
+            try {
+                return library.chapterText(chapterId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                EventLog.log("NEXT", "fetch of chapter $chapterId failed, try $attempt of $MAX_TRIES: $e")
+                if (attempt < MAX_TRIES) delay(RETRY_MS)
+            }
+        }
+        return null
+    }
+
+    private fun appendChapter(chapter: Chapter, text: ChapterText) {
         // Most sites open the text with its own heading ("Chapter 2: ..."); then the title isn't said twice.
-        val spokenTitle = sentences.firstOrNull()?.startsWith(chapter.title, ignoreCase = true) != true
-        val items = itemsFor(chapter, sentences.size, spokenTitle)
+        val first = firstUnskipped(text, 0)?.let { text.sentences[it].text }
+        val spokenTitle = first?.startsWith(chapter.title, ignoreCase = true) != true
+        val items = itemsFor(chapter, text, spokenTitle)
         titlePhrase = chapter.title.takeIf { spokenTitle }
         syncPhrases()
         val wasEnded = player.playbackState == Player.STATE_ENDED
@@ -218,19 +247,43 @@ class PlaybackService : MediaSessionService() {
         player.playWhenReady = play
     }
 
-    private fun syncPhrases() = generator.setPhrases(listOfNotNull(titlePhrase) + notices)
+    /** Phrases go to the generator already spoken through the fixes; [phraseItem] addresses them the same way. */
+    private fun syncPhrases() = generator.setPhrases((listOfNotNull(titlePhrase) + notices).map(rules::spoken))
+
+    /** The first sentence at or after [from] that no skip rule silences, or null. */
+    private fun firstUnskipped(text: ChapterText, from: Int): Int? =
+        (from until text.sentences.size).firstOrNull { it !in text.skipped }
+
+    /**
+     * Says [text], spoken through the fixes, then goes back paused to the sentence playing now (or the one a preview
+     * before went back to). For trying out a pronunciation fix.
+     */
+    private fun preview(text: String) {
+        previewReturn = currentPosition() ?: previewReturn
+        startJob?.cancel()
+        EventLog.log("PREVIEW", "\"$text\" then back to $previewReturn")
+        titlePhrase = null
+        notices = listOf(text)
+        syncPhrases()
+        player.setMediaItem(phraseItem(PREVIEW_ID, text, chapterTitle = null))
+        player.prepare()
+        player.play()
+    }
 
     // ---- Items ----
 
-    private fun itemsFor(chapter: Chapter, count: Int, spokenTitle: Boolean): List<MediaItem> {
+    /** One item per sentence no skip rule silences, under the chapter's audio key, after its spoken title if wanted. */
+    private fun itemsFor(chapter: Chapter, text: ChapterText, spokenTitle: Boolean): List<MediaItem> {
         val hash = requireNotNull(chapter.textHash) { "chapter ${chapter.id} has no text" }
+        val key = rules.audioKey(hash, text.sentences)
         val voice = settings.voice
-        val items = ArrayList<MediaItem>(count + 1)
+        val items = ArrayList<MediaItem>(text.sentences.size + 1)
         if (spokenTitle) items += phraseItem("$TITLE_PREFIX${chapter.id}", chapter.title, chapter.title)
-        for (i in 0 until count) {
+        for (i in text.sentences.indices) {
+            if (i in text.skipped) continue
             items += MediaItem.Builder()
-                .setMediaId("$SENTENCE_PREFIX${chapter.id}:$i")
-                .setUri(SentenceDataSource.uri(voice, hash, i))
+                .setMediaId(sentenceId(chapter.id, i))
+                .setUri(SentenceDataSource.uri(voice, key, i))
                 .setMimeType("audio/wav")
                 .setMediaMetadata(metadata(chapter.title))
                 .build()
@@ -240,7 +293,7 @@ class PlaybackService : MediaSessionService() {
 
     private fun phraseItem(id: String, text: String, chapterTitle: String?): MediaItem = MediaItem.Builder()
         .setMediaId(id)
-        .setUri(SentenceDataSource.uri(settings.voice, Generator.phraseKey(text), 0))
+        .setUri(SentenceDataSource.uri(settings.voice, Generator.phraseKey(rules.spoken(text)), 0))
         .setMimeType("audio/wav")
         .setMediaMetadata(metadata(chapterTitle ?: text))
         .build()
@@ -250,6 +303,8 @@ class PlaybackService : MediaSessionService() {
         .setArtist(bookTitle)
         .setAlbumTitle(bookTitle)
         .build()
+
+    private fun sentenceId(chapterId: Long, index: Int) = "$SENTENCE_PREFIX$chapterId:$index"
 
     /** The (chapter, sentence) of a sentence item's id, or null for a phrase. */
     private fun parse(mediaId: String?): Pair<Long, Int>? {
@@ -409,6 +464,12 @@ class PlaybackService : MediaSessionService() {
                     player.seekTo(last, 0)
                 }
             }
+            if (playbackState == Player.STATE_ENDED && player.currentMediaItem?.mediaId == PREVIEW_ID) {
+                val back = previewReturn
+                previewReturn = null
+                player.pause()
+                if (back != null) startAt(back, play = false)
+            }
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -451,6 +512,8 @@ class PlaybackService : MediaSessionService() {
                         .add(SessionCommand(Commands.CONTINUE, Bundle.EMPTY))
                         .add(SessionCommand(Commands.SET_VOICE, Bundle.EMPTY))
                         .add(SessionCommand(Commands.SLEEP, Bundle.EMPTY))
+                        .add(SessionCommand(Commands.RULES_CHANGED, Bundle.EMPTY))
+                        .add(SessionCommand(Commands.PREVIEW, Bundle.EMPTY))
                         .build(),
                 )
                 .build()
@@ -483,6 +546,18 @@ class PlaybackService : MediaSessionService() {
                     currentPosition()?.let { startAt(it, player.playWhenReady) }
                 }
                 Commands.SLEEP -> setSleep(args.getInt(Commands.ARG_SLEEP_MINUTES, 0))
+                Commands.RULES_CHANGED -> {
+                    EventLog.log("RULES", "changed")
+                    generator.rulesChanged()
+                    // What is skipped and where audio lives may have changed: rebuild from the sentence playing now.
+                    // startAt reloads the rules and moves on past a sentence that is now skipped.
+                    currentPosition()?.let { startAt(it, player.playWhenReady) }
+                }
+                Commands.PREVIEW -> {
+                    val text = args.getString(Commands.ARG_TEXT)?.takeIf { it.isNotBlank() }
+                        ?: return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_BAD_VALUE))
+                    preview(text)
+                }
                 else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
@@ -501,15 +576,21 @@ class PlaybackService : MediaSessionService() {
                     val last = library.lastPlayed() ?: throw IllegalStateException("nothing played yet")
                     val start = continuePosition(last.bookId)!!
                     val book = library.book(start.bookId)!!
-                    val count = library.sentences(start.chapterId).size // stored already: it was playing
+                    val text = library.chapterText(start.chapterId) // stored already: it was playing
                     val chapter = library.chapter(start.chapterId)!!
+                    rules = library.rules(book.id)
+                    val index = firstUnskipped(text, start.sentence.coerceIn(0, text.sentences.lastIndex))
+                        ?: text.sentences.indices.lastOrNull { it !in text.skipped }
+                        ?: throw IllegalStateException("chapter ${chapter.id} is all skipped")
+                    val items = itemsFor(chapter, text, spokenTitle = false)
                     bookId = book.id
                     bookTitle = book.title
                     currentChapterId = -1 // the first transition then starts the chapter, which fetches the next one
                     appended.clear()
                     appended += chapter.id
-                    generator.update(start)
-                    result.set(MediaSession.MediaItemsWithStartPosition(itemsFor(chapter, count, spokenTitle = false), start.sentence, 0))
+                    generator.update(Position(book.id, chapter.id, index))
+                    val itemIndex = items.indexOfFirst { it.mediaId == sentenceId(chapter.id, index) }
+                    result.set(MediaSession.MediaItemsWithStartPosition(items, itemIndex, 0))
                 } catch (e: Exception) {
                     EventLog.log("RESUME", "failed: $e")
                     result.setException(e)
@@ -523,9 +604,12 @@ class PlaybackService : MediaSessionService() {
         const val SENTENCE_PREFIX = "s:"
         const val TITLE_PREFIX = "t:"
         const val NOTICE_ID = "notice"
+        const val PREVIEW_ID = "preview"
         const val LOADING = "Loading chapter."
         const val NO_MORE_CHAPTERS = "No more chapters yet."
         const val FETCH_FAILED = "Couldn't load the next chapter."
+        const val NOTHING_TO_READ = "The next chapters have nothing to read."
+        const val MAX_SKIPPED_CHAPTERS = 3
         const val RETRY_MS = 60_000L
         const val MAX_TRIES = 5
     }

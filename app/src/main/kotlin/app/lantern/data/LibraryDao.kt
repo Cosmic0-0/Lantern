@@ -115,4 +115,25 @@ internal interface LibraryDao {
 
     @Insert
     suspend fun insertHistory(rows: List<HistoryEntity>)
+
+    // ---- Rules (docs/decisions/speech-rules.md) ----
+
+    /** The book's own rules, then the all-books rules, each oldest first. */
+    @Query("SELECT * FROM rule WHERE bookId = :bookId OR bookId IS NULL ORDER BY bookId IS NULL, createdAt, id")
+    suspend fun rules(bookId: Long): List<RuleEntity>
+
+    @Query("SELECT * FROM rule WHERE id = :id")
+    suspend fun rule(id: Long): RuleEntity?
+
+    @Insert
+    suspend fun insertRule(rule: RuleEntity): Long
+
+    @Query("UPDATE rule SET term = :term, replacement = :replacement WHERE id = :id")
+    suspend fun updateRule(id: Long, term: String, replacement: String?)
+
+    @Query("DELETE FROM rule WHERE id = :id")
+    suspend fun deleteRule(id: Long)
+
+    @Query("DELETE FROM rule")
+    suspend fun deleteAllRules()
 }

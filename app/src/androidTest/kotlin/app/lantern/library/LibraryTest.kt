@@ -434,4 +434,79 @@ class LibraryTest {
         assertNull(library.nextChapter(chapters[2].id))
         assertNull(library.nextChapter(-1))
     }
+
+    // ---- Rules (step 5) ----
+
+    @Test
+    fun rulesRoundTripAndAreTrimmed() = runBlocking {
+        val book = library.add(listing)
+        val fix = library.addRule(book, RuleKind.FIX, "  Xiao Yan ", " Shao Yen ")
+        val skip = library.addRule(book, RuleKind.SKIP, "Translator:", "ignored")
+
+        assertEquals(
+            listOf(
+                Rule(fix, book, RuleKind.FIX, "Xiao Yan", "Shao Yen"),
+                Rule(skip, book, RuleKind.SKIP, "Translator:", null),
+            ),
+            library.ruleList(book),
+        )
+
+        library.updateRule(Rule(fix, book, RuleKind.FIX, "Xiao Yan", "Show Yen"))
+        library.deleteRule(skip)
+        assertEquals(listOf(Rule(fix, book, RuleKind.FIX, "Xiao Yan", "Show Yen")), library.ruleList(book))
+        assertEquals("Show Yen's turn.", library.rules(book).spoken("Xiao Yan's turn."))
+    }
+
+    @Test
+    fun aBlankRuleOrAFixWithNoSoundIsRejected() = runBlocking {
+        val book = library.add(listing)
+        for ((kind, term, replacement) in listOf(Triple(RuleKind.SKIP, " ", null), Triple(RuleKind.FIX, "Xiao", " "))) {
+            try {
+                library.addRule(book, kind, term, replacement)
+                fail("expected $kind \"$term\" to be rejected")
+            } catch (_: IllegalArgumentException) {
+            }
+        }
+        assertTrue(library.ruleList(book).isEmpty())
+    }
+
+    @Test
+    fun allBooksRulesApplyToEveryBookAfterItsOwn() = runBlocking {
+        val a = library.add(listing)
+        val b = library.add(Listing("src", "/novel/b", "Book B", null))
+        library.addRule(null, RuleKind.FIX, "Qi", "Chee")
+        library.addRule(a, RuleKind.FIX, "Qi", "Key")
+
+        assertEquals(listOf(a, null), library.ruleList(a).map { it.bookId })
+        assertEquals(listOf<Long?>(null), library.ruleList(b).map { it.bookId })
+        // The book's own fix comes first, so it wins over the all-books fix for the same word.
+        assertEquals("Key", library.rules(a).spoken("Qi"))
+        assertEquals("Chee", library.rules(b).spoken("Qi"))
+    }
+
+    @Test
+    fun aBooksRulesGoWithItAndAllBooksRulesStay() = runBlocking {
+        val a = library.add(listing)
+        library.addRule(a, RuleKind.SKIP, "Translator:")
+        library.addRule(null, RuleKind.SKIP, "Editor:")
+
+        library.delete(a)
+
+        assertEquals(1, count("SELECT COUNT(*) FROM rule"))
+        assertEquals(1, count("SELECT COUNT(*) FROM rule WHERE bookId IS NULL"))
+    }
+
+    @Test
+    fun chapterTextMarksTheWholeParagraphOfASkipMatch() = runBlocking {
+        val book = library.add(listing)
+        val first = chaptersOf(book)[0]
+        // "/c/1" is two paragraphs of two sentences: [0, 0, 1, 1].
+        assertEquals(emptySet<Int>(), library.chapterText(first.id).skipped)
+
+        library.addRule(book, RuleKind.SKIP, "nobody noticed")
+
+        val text = library.chapterText(first.id)
+        assertEquals(setOf(2, 3), text.skipped)
+        assertEquals(4, text.sentences.size) // the stored sentences don't change
+    }
 }

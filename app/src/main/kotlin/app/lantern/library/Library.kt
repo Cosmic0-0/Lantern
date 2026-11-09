@@ -5,13 +5,17 @@ import app.lantern.core.ChapterPlan
 import app.lantern.core.History
 import app.lantern.core.Listing
 import app.lantern.core.Position
+import app.lantern.core.Fix
 import app.lantern.core.Sentence
+import app.lantern.core.SkipRule
+import app.lantern.core.SpeechRules
 import app.lantern.core.TextPrep
 import app.lantern.data.BookEntity
 import app.lantern.data.ChapterEntity
 import app.lantern.data.HistoryEntity
 import app.lantern.data.LanternDatabase
 import app.lantern.data.PositionEntity
+import app.lantern.data.RuleEntity
 import app.lantern.data.SentenceEntity
 import java.io.IOException
 import java.security.MessageDigest
@@ -103,9 +107,14 @@ class Library(
      * The chapter's sentences with their paragraphs. The first call fetches the text through [ChapterSource],
      * splits it and stores the sentences and the text hash in one transaction; later calls read the database
      * only. Throws [IOException] if fetching fails or leaves nothing to read, and stores nothing then. Throws
-     * [NoSuchElementException] for a chapter that doesn't exist (or was deleted meanwhile). Nothing is skipped yet.
+     * [NoSuchElementException] for a chapter that doesn't exist (or was deleted meanwhile). [ChapterText.skipped]
+     * follows the book's skip rules as they are now.
      */
-    suspend fun chapterText(chapterId: Long): ChapterText = ChapterText(storedSentences(chapterId), emptySet())
+    suspend fun chapterText(chapterId: Long): ChapterText {
+        val sentences = storedSentences(chapterId)
+        val bookId = dao.chapterEntity(chapterId)?.bookId ?: return ChapterText(sentences, emptySet())
+        return ChapterText(sentences, rules(bookId).skipped(sentences))
+    }
 
     /** [chapterText] without the paragraphs, for callers that need only the text. Fetches and throws the same way. */
     suspend fun sentences(chapterId: Long): List<String> = storedSentences(chapterId).map { it.text }
@@ -213,8 +222,65 @@ class Library(
     /** Deletes the book and everything that belongs to it. */
     suspend fun delete(bookId: Long) = dao.deleteBook(bookId)
 
+    // ---- Skip rules and pronunciation fixes (docs/decisions/speech-rules.md) ----
+
+    /** The rules in force for [bookId]: its own first, so its fix wins over an all-books fix for the same word. */
+    suspend fun rules(bookId: Long): SpeechRules {
+        val rules = ruleList(bookId)
+        return SpeechRules(
+            skips = rules.filter { it.kind == RuleKind.SKIP }.map { SkipRule(it.term) },
+            fixes = rules.filter { it.kind == RuleKind.FIX }.map { Fix(it.term, it.replacement.orEmpty()) },
+        )
+    }
+
+    /** [bookId]'s own rules, then the all-books rules, each oldest first. */
+    suspend fun ruleList(bookId: Long): List<Rule> = dao.rules(bookId).map(::toRule)
+
+    /**
+     * Adds a rule for [bookId], or for all books when it is null, and returns its id. Throws
+     * [IllegalArgumentException] for a blank [term], or a fix with a blank [replacement].
+     */
+    suspend fun addRule(bookId: Long?, kind: RuleKind, term: String, replacement: String? = null): Long {
+        val (t, r) = checkedRule(kind, term, replacement)
+        return dao.insertRule(RuleEntity(bookId = bookId, kind = kindName(kind), term = t, replacement = r, createdAt = clock()))
+    }
+
+    /** Changes a rule's [Rule.term] and [Rule.replacement]; its book and kind stay. A rule deleted meanwhile is ignored. */
+    suspend fun updateRule(rule: Rule) {
+        val (t, r) = checkedRule(rule.kind, rule.term, rule.replacement)
+        dao.updateRule(rule.id, t, r)
+    }
+
+    suspend fun deleteRule(id: Long) = dao.deleteRule(id)
+
+    /** Every rule of every book. For debug checks. */
+    suspend fun deleteAllRules() = dao.deleteAllRules()
+
     private companion object {
         const val TITLE_MAX = 80
+
+        fun kindName(kind: RuleKind) = when (kind) {
+            RuleKind.SKIP -> RuleEntity.KIND_SKIP
+            RuleKind.FIX -> RuleEntity.KIND_FIX
+        }
+
+        fun toRule(e: RuleEntity) = Rule(
+            id = e.id,
+            bookId = e.bookId,
+            kind = if (e.kind == RuleEntity.KIND_FIX) RuleKind.FIX else RuleKind.SKIP,
+            term = e.term,
+            replacement = e.replacement,
+        )
+
+        /** The trimmed term and replacement; a skip rule never keeps a replacement. */
+        fun checkedRule(kind: RuleKind, term: String, replacement: String?): Pair<String, String?> {
+            val t = term.trim()
+            require(t.isNotEmpty()) { "A rule needs some text" }
+            if (kind == RuleKind.SKIP) return t to null
+            val r = replacement?.trim().orEmpty()
+            require(r.isNotEmpty()) { "A pronunciation fix needs how it should sound" }
+            return t to r
+        }
 
         fun sentenceEntities(chapterId: Long, sentences: List<Sentence>): List<SentenceEntity> =
             sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s.text, s.paragraph) }

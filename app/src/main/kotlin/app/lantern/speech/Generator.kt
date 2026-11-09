@@ -1,7 +1,11 @@
 package app.lantern.speech
 
+import app.lantern.core.ChapterPlan
 import app.lantern.core.Position
 import app.lantern.core.ReadAhead
+import app.lantern.core.Sentence
+import app.lantern.core.SpeechRules
+import app.lantern.library.Chapter
 import app.lantern.library.Library
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -17,6 +21,10 @@ import java.util.concurrent.TimeUnit
  * fetches text: a chapter whose text isn't stored yet is simply not made (the playback service fetches the next
  * chapter when one starts, then calls [textArrived]).
  *
+ * The book's skip rules and pronunciation fixes (docs/decisions/speech-rules.md) apply here: a skipped sentence counts
+ * as ready and is never made, a sentence is spoken through [SpeechRules.spoken], and a chapter's audio lives under
+ * [SpeechRules.audioKey] instead of its bare text hash. Phrases arrive already spoken from the playback service.
+ *
  * Must run inside the foreground playback service: a background app gets almost no CPU (Spike 1).
  */
 class Generator(
@@ -27,8 +35,11 @@ class Generator(
     voice: String,
     private val log: (String) -> Unit,
 ) : AutoCloseable {
-    /** [chapterId] is -1 for a phrase. */
-    private class Job(val chapterId: Long, val index: Int, val textHash: String, val text: String)
+    /** [chapterId] is -1 for a phrase. [key] is where its audio goes: the chapter's audio key, or the phrase key. */
+    private class Job(val chapterId: Long, val index: Int, val key: String, val text: String)
+
+    /** A chapter as the rules see it: its sentences, which are skipped, and its audio key. */
+    private class Speech(val sentences: List<Sentence>, val skipped: Set<Int>, val key: String)
 
     private val wake = Semaphore(0) // a permit means "look again"; permits pile up, so no wake-up is lost
 
@@ -36,10 +47,13 @@ class Generator(
     @Volatile private var voice = voice
     @Volatile private var phrases: List<String> = emptyList()
     @Volatile private var running = true
+    @Volatile private var rulesStale = false
+
 
     // Only the generator thread touches these.
-    private var cachedChapter = -1L
-    private var cachedSentences: List<String> = emptyList()
+    private var rulesBook = -1L
+    private var rules: SpeechRules? = null
+    private val speech = HashMap<Long, Speech>() // chapter id -> its speech under [rules]; the current and next only
     private var kept: Pair<String, Set<String>>? = null
 
     private val thread = Thread(::run, "lantern-generator").apply { start() }
@@ -63,6 +77,12 @@ class Generator(
      */
     fun setPhrases(texts: List<String>) {
         phrases = texts.distinct()
+        wake.release()
+    }
+
+    /** The book's rules changed: what is skipped, what is said and where audio lives are worked out again. */
+    fun rulesChanged() {
+        rulesStale = true
         wake.release()
     }
 
@@ -121,38 +141,56 @@ class Generator(
         wanted.firstOrNull { !audio.isReady(v, phraseKey(it), 0) }?.let { return Job(-1, 0, phraseKey(it), it) }
 
         val p = playing ?: return null
-        val current = library.chapter(p.chapterId) ?: return null
-        val currentHash = current.textHash ?: return null
-        val currentPlan = library.plan(current.id) ?: return null
-        val next = library.nextChapter(current.id)
-        val nextPlan = next?.let { library.plan(it.id) }
-        val hashes = buildMap {
-            put(current.id, currentHash)
-            if (nextPlan != null) next.textHash?.let { put(next.id, it) }
+        val current = library.chapter(p.chapterId)?.takeIf { it.textHash != null } ?: return null
+        val rules = rulesFor(current.bookId)
+        val next = library.nextChapter(current.id)?.takeIf { it.textHash != null }
+        val chapters = buildMap {
+            put(current.id, speechOf(current, rules))
+            if (next != null) put(next.id, speechOf(next, rules))
         }
-        keepOnly(v, hashes.values.toSet() + wanted.map(::phraseKey))
+        speech.keys.retainAll(chapters.keys)
+        keepOnly(v, chapters.values.mapTo(HashSet()) { it.key } + wanted.map(::phraseKey))
 
-        val (chapterId, index) = ReadAhead.next(p, currentPlan, nextPlan) { c, i -> audio.isReady(v, hashes.getValue(c), i) }
-            ?: return null
-        if (chapterId != cachedChapter) {
-            cachedSentences = library.sentences(chapterId) // stored already, so this reads the database only
-            cachedChapter = chapterId
+        val currentPlan = ChapterPlan(current.id, chapters.getValue(current.id).sentences.size)
+        val nextPlan = next?.let { ChapterPlan(it.id, chapters.getValue(it.id).sentences.size) }
+        val (chapterId, index) = ReadAhead.next(p, currentPlan, nextPlan) { c, i ->
+            val s = chapters.getValue(c)
+            i in s.skipped || audio.isReady(v, s.key, i)
+        } ?: return null
+        val s = chapters.getValue(chapterId)
+        return Job(chapterId, index, s.key, rules.spoken(s.sentences[index].text))
+    }
+
+    /** The book's rules, loaded again when the book changes or [rulesChanged] was called. */
+    private suspend fun rulesFor(bookId: Long): SpeechRules {
+        val cached = rules
+        if (cached != null && bookId == rulesBook && !rulesStale) return cached
+        rulesStale = false // before loading, so a change during the load is seen next time
+        speech.clear()
+        return library.rules(bookId).also {
+            rules = it
+            rulesBook = bookId
         }
-        return Job(chapterId, index, hashes.getValue(chapterId), cachedSentences[index])
+    }
+
+    /** [chapter]'s speech under [rules]. Its text is stored already, so this reads the database only. */
+    private suspend fun speechOf(chapter: Chapter, rules: SpeechRules): Speech = speech.getOrPut(chapter.id) {
+        val sentences = library.chapterText(chapter.id).sentences
+        Speech(sentences, rules.skipped(sentences), rules.audioKey(requireNotNull(chapter.textHash), sentences))
     }
 
     /** Only the current and next chapters' audio, in the current voice, is kept. Runs when that set changes. */
-    private fun keepOnly(voice: String, hashes: Set<String>) {
-        val want = voice to hashes
+    private fun keepOnly(voice: String, keys: Set<String>) {
+        val want = voice to keys
         if (kept == want) return
-        audio.keepOnly(voice, hashes)
+        audio.keepOnly(voice, keys)
         kept = want
     }
 
     private fun make(tts: PhononTTS, voice: String, job: Job) {
         val start = System.nanoTime()
         val samples = try {
-            audio.write(voice, job.textHash, job.index, onError = { e ->
+            audio.write(voice, job.key, job.index, onError = { e ->
                 log("GEN error chapter=${job.chapterId} sentence=${job.index} $e text=${job.text.take(60)}")
             }) { w -> tts.speak(job.text) { pcm -> w.write(pcm); true } }
         } catch (e: IOException) {
