@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch {
-            val books = LanternDatabase.get(this@MainActivity).books().count()
+            val books = LanternDatabase.get(this@MainActivity).dao().bookCount()
             Log.i(TAG, "database ready books=$books path=${getDatabasePath("lantern.db")}")
         }
         setContent {
