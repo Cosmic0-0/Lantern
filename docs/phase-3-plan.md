@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: approved 2026-11-09. Steps 1, 2, 4, 5 and 7 done, steps 3 and 8 built with their phone checks still to run, step 9 a no-go, step 6 in progress (all 2026-11-09).
+Status: approved 2026-11-09. Steps 1 to 5, 7 and 8 done, step 9 a no-go, step 6 in progress (all 2026-11-09). Acceptance (step 10) follows step 6.
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -90,7 +90,12 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - The reader also has the Sleep button.
   - 9 reader tests passed on the A26, 4 of them new. One new test first failed because its tap landed in the row's side padding; I moved the tap and it passed.
   - Chapter 6, fetched by the new build, is stored as 283 sentences in 167 paragraphs.
-  - **Still to do on the phone:** with the merged build, the reader tests can't open their window while the lock screen is up. The four checks above need the phone unlocked.
+  - **Phone checks, passed 2026-11-09 with the phone unlocked:**
+    - All 9 reader tests pass on the merged build. With the lock screen up, the test window can't open.
+    - Chapter 6 shows paragraphs as on the site.
+    - A tap on "The knightly order will…", the second sentence of a paragraph, played sentence 2 and highlighted only that sentence.
+    - After a pause and a scroll by hand, "Back to voice" showed, and Play started at sentence 9. That's "In any case…", the first sentence whose first line was fully on screen; the partly visible line above belongs to sentence 8.
+    - Not checked by eye: following inside a very long paragraph. The test covers it.
 
 ### 4. Rules (`core`, Sonnet)
 
@@ -185,7 +190,12 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
     - Matched rows keep their ids, so your position, history and fetched text stay.
     - The screen puts the book's own title first.
     - 35 library tests pass on the A26, 7 of them new for switching.
-  - **Still to do on the phone:** the switch itself, run from the screen with the phone unlocked.
+  - **Phone check, passed 2026-11-09, on your real book, with your approval:**
+    - **The preview:** the screen listed NovelBuddy's "Ode of the Brave" first and previewed "Matches 104 of your 104 chapters. Adds 1… You're at Chapter 6. After the switch: Chapter 6."
+    - **The switch:** after it, the book screen still showed chapter 6, sentence 18, and Continue resumed at that sentence. Chapter 8, never fetched before, came from `api.novelbuddy.me`.
+    - **Switching back:** the preview said "Matches 104 of your 105 chapters. Removes 1 chapter only on the old source, not loaded yet."
+    - **How the book ends up:** on AllNovelFull with 104 chapters, and your position put back at chapter 3, sentence 18.
+    - **Not a bug:** on the switch screen, the "On NovelBuddy" line under a title is the button, not the title, as in search.
 
 ### 9. Wuxiaworld (`sources`, go or no-go)
 
