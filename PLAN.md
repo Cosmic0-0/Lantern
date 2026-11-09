@@ -6,7 +6,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 ## Where things stand
 
-Start here when picking this up in a new chat. Last updated 2026-11-09.
+Start here when picking this up in a new chat. Last updated 2026-11-09, at the end of the Phase 3 build.
 
 The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and all three Phase 1 spikes passed the same day. The MVP was built and accepted the same day. The app is in `app/`, `core/` and `sources/`. `spikes/` holds only throwaway spike code.
 
@@ -31,7 +31,17 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 17. ~~Approve the Phase 3 plan.~~ Approved 2026-11-09, merged and pushed to `master`.
 18. ~~Phase 3 step 1, schema 2 and the migration.~~ Done 2026-11-09: your phone's database migrated with every row and your position intact, and backups are in `.bench/`. See the [Phase 3 plan](docs/phase-3-plan.md#1-schema-2-and-the-migration-app).
 19. ~~Phase 3 steps 2 to 9.~~ Done 2026-11-09, mostly in parallel, each merged into `master` after review and phone checks. Step 9 (Wuxiaworld) is a no-go because its terms forbid automated access. Results are in the [Phase 3 plan](docs/phase-3-plan.md).
-20. **Next: Phase 3 acceptance (step 10)**, on your A26. It needs a real phone call during playback, your own use of the rule sheet and Rules screen, and a listen to a pronunciation fix. Then the README and `docs/phase-3-results.md`.
+20. ~~Push Phase 3.~~ Pushed to GitHub 2026-11-09, at `8585ce5`.
+21. **Next: Phase 3 acceptance (step 10)** on your A26. You do the checks, and then tell me which ones you ran:
+    - [ ] **Phone call:** a real call during playback, either incoming or one to your own voicemail (check your plan). It should pause, and afterwards resume within one sentence. This has been open since Spike 2; the `adb` stand-in passed.
+    - [ ] **Skip rule:** long-press a junk line in the reader, then choose "Skip lines like this". Cut it down to the junk part and Save. It should dim, and listening should pass over it.
+    - [ ] **Pronunciation fix:** long-press a sentence with a name, choose "Fix how a word sounds", tap the name and type how it sounds. Preview it, then Save, and listen for it in the next sentences.
+    - [ ] **Rules screen:** from the book screen, Rules. Edit the fix, then delete both rules.
+    - [ ] **Sleep timer:** set one from the mini player or the reader, and let it stop playback in a real session.
+    - [ ] **A day of normal use** with paragraphs in the reader.
+
+    Then I write `docs/phase-3-results.md` with the checks you ran, update the README (`update-readme`), and set this list up for Phase 4.
+22. Then plan Phase 4, more sources: see the [roadmap](#roadmap).
 
 **Current setup:**
 
@@ -39,6 +49,10 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 - Build and phone driver: `tools/lantern.sh`. A fresh checkout needs `npm ci && npm run build` in `sources/js`, and `local.properties` with `sdk.dir`, `lantern.benchDir`, `lantern.modelDir` and `lantern.voicesDir` (see `app/build.gradle.kts`).
 - Debug builds include two screens, for checks from `adb`: `DebugActivity` (generate a chapter and time it) and `DebugPlayerActivity` (send commands to the player).
 - Instrumented tests run with `adb install -r` of both APKs, then `adb shell am instrument -w -e class <test classes> app.lantern.test/androidx.test.runner.AndroidJUnitRunner`. Don't use `connectedDebugAndroidTest`, which can uninstall the app afterwards and wipe your library. `ModelInstallerTest` touches the installed model, so run it only on purpose.
+- Compose UI tests and screen checks need the phone unlocked: a PIN lock screen hides the app from them. `tools/phone-ui.sh` lists, taps and screenshots the app's screens from `adb`.
+- After phone tests, put your reading position back. On 2026-11-09 it was Ode of the Brave, chapter 3, sentence 18 (the book screen shows sentence 19, counting from 1).
+- Your library database is on schema 2. Backups from before the migration are in `.bench/db-backup-2026-11-09` and `.bench/db-backup-2026-11-09b`. Keep them until Phase 3 is accepted.
+- Parallel work in Phase 3 ran as one agent per step. Each had its own worktree under `.claude/worktrees/`, made from local `master` with `local.properties` and the built JS bundle copied in. Agents ran laptop tests only, and every phone check ran one at a time after review and merge.
 - `dl.google.com` timed out from the laptop on 2026-11-09, so new Android libraries can't be downloaded. Build with `--offline` from the Gradle cache.
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
 - Spike code is in `spikes/`. The spike apps were uninstalled from the phone on 2026-11-09. Only `app.lantern` is installed.
