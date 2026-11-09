@@ -46,7 +46,7 @@ Measured on 2026-11-09 with the test app in `spikes/engine/`, which loads `libpt
 - **Heat:** the battery read 39.9 °C at the start of the long run and 40.0 °C at the end, while charging.
 - **RAM** peaked at about 550 MB for the whole app. That's a lot for a 65 MB model, but it fits on a 6 GB phone.
 - **A background app gets almost no CPU.** In an earlier attempt the phone was used for other apps partway through. From then on, generating slowed sharply and stalled within 3 minutes. So Lantern must generate inside its foreground playback service, and [Spike 2](../../PLAN.md#roadmap) checks that this keeps the speed with the screen off.
-- **Numbers:** you listened to the numbers test and found it alright.
+- **Listening:** on 2026-11-09 you found the numbers test alright, and both chapters sounded fine, with no dropped or garbled words.
 
 To repeat: build `libptts_ffi.so` (`android/build.sh` in xn-ptts, arm64 only is enough), then in `spikes/engine/` run `./run.sh build`, `install`, `push-model` and `push-texts`, then `./run.sh run <text> <voice> <threads>`. Real chapters go in `spikes/engine/texts/real/`, which is gitignored. Results land in `results.jsonl` on the phone, and each WAV is copied to `Music/LanternVoiceTest`.
 

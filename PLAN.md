@@ -19,7 +19,7 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 5. The baseline test in Phase 0 of the [roadmap](#roadmap) wasn't done before approval. You can still try it.
 6. ~~Approve the plan.~~ Approved 2026-11-09.
 7. ~~Install Android Studio.~~ Done 2026-11-09.
-8. Spike 1, engine: timed on 2026-11-09, RTF 0.33 at 2 threads over a whole chapter. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app). Still open: you listen to the two chapter WAVs (`spike1-ode-ch1-...` and `spike1-shadow-ch1-...` in `Music/LanternVoiceTest`) for dropped or garbled words.
+8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
 9. Spike 2, playback, then Spike 3, sources.
 
 **Current setup:**
