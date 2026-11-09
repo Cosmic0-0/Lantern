@@ -15,8 +15,13 @@ object Listings {
      */
     fun groupByTitle(listings: List<Listing>, sourceOrder: List<String>): List<List<Listing>> {
         fun rank(listing: Listing) = sourceOrder.indexOf(listing.sourceId).let { if (it < 0) Int.MAX_VALUE else it }
-        return listings.groupBy { normalize(it.title).ifEmpty { it.title } }.values.map { group -> group.sortedBy(::rank) }
+        return listings.groupBy { key(it.title) }.values.map { group -> group.sortedBy(::rank) }
     }
+
+    /** Whether two titles are the same novel by the rule [groupByTitle] uses. */
+    fun sameTitle(a: String, b: String): Boolean = key(a) == key(b)
+
+    private fun key(title: String) = normalize(title).ifEmpty { title }
 
     // Apostrophes vanish ("Don't" is "Dont"); other punctuation is a word break ("Re-Zero" is "Re Zero").
     // A title with nothing left falls back to itself in groupByTitle, so "!!!" never merges with "???".

@@ -607,7 +607,7 @@ class PlaybackService : MediaSessionService() {
         const val PREVIEW_ID = "preview"
         const val LOADING = "Loading chapter."
         const val NO_MORE_CHAPTERS = "No more chapters yet."
-        const val FETCH_FAILED = "Couldn't load the next chapter."
+        const val FETCH_FAILED = "Couldn't load the next chapter. You can switch source from the book screen."
         const val NOTHING_TO_READ = "The next chapters have nothing to read."
         const val MAX_SKIPPED_CHAPTERS = 3
         const val RETRY_MS = 60_000L
