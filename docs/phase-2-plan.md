@@ -1,6 +1,6 @@
 # Phase 2 plan: the MVP
 
-Status: approved 2026-11-09. Steps 1 to 8 done 2026-11-09, apart from the checks only you can do (listed under steps 7 and 8). Step 9, acceptance on your A26, is next.
+Status: approved 2026-11-09. Steps 1 to 8 done 2026-11-09, apart from the checks only you can do (listed under steps 7 and 8). Step 9, acceptance on your A26, done 2026-11-09: you accepted the MVP after your own checks.
 
 Scope and the "done means" checklist are in [PLAN.md](../PLAN.md#mvp-scope). The module shape is in [Phase 2 architecture](phase-2-architecture.md), terms in [CONTEXT.md](../CONTEXT.md), and the decisions made for this phase are:
 

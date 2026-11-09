@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phase 1 is done, and Phase 2, the MVP, is next. Lantern itself isn't built yet.
+Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phases 1 and 2 are done: the MVP is built, on your A26 and accepted. Phase 3 is next.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -8,7 +8,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 Start here when picking this up in a new chat. Last updated 2026-11-09.
 
-The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and all three Phase 1 spikes passed the same day. No app code exists yet, only throwaway spike code in `spikes/`.
+The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and all three Phase 1 spikes passed the same day. The MVP was built and accepted the same day. The app is in `app/`, `core/` and `sources/`. `spikes/` holds only throwaway spike code.
 
 **Next steps, in order:**
 
@@ -24,12 +24,13 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 10. ~~Spike 3, sources.~~ Done 2026-11-09: plugins run in QuickJS on the phone. AllNovelFull, ReadNovelFull and NovelBuddy work fully, NovelCool is dropped and Novel Bin is broken. See [Spike 3](docs/spikes/spike-3-sources.md).
 11. ~~Plan the Phase 2 MVP build.~~ Written 2026-11-09: [Phase 2 plan](docs/phase-2-plan.md), with the [architecture sketch](docs/phase-2-architecture.md), the glossary in [CONTEXT.md](CONTEXT.md) and 13 decisions in `docs/decisions/`, all as I recommended. [Starting Phase 2](docs/phase-2-start.md) has the background. Phase 1 leaves two small things open: the phone call test and Wuxiaworld.
 12. ~~Approve the Phase 2 plan.~~ Approved 2026-11-09.
-13. ~~Build the MVP, steps 1 to 8.~~ Done 2026-11-09: the app is in `app/`, `core/` and `sources/`, on branch `worktree-phase-2-plan`, and installed on your A26. Each step's tests and phone results are in the [Phase 2 plan](docs/phase-2-plan.md).
-14. **Next: step 9, acceptance on your A26.** The checks that need you are listed under steps 7 and 8 of the [Phase 2 plan](docs/phase-2-plan.md): three chapters in a row with the screen off, Bluetooth off, a reboot, a phone call, both voices and the speed change by ear, and a day of normal use. After that: update the README, uninstall the spike apps, and plan Phase 3.
+13. ~~Build the MVP, steps 1 to 8.~~ Done 2026-11-09: the app is in `app/`, `core/` and `sources/`, and installed on your A26. Each step's tests and phone results are in the [Phase 2 plan](docs/phase-2-plan.md).
+14. ~~Step 9, acceptance on your A26.~~ Accepted 2026-11-09: you said your checks were enough and the app is good. Which checks you ran isn't recorded, so treat the phone call as still untested until one comes in.
+15. **Next:** update the README, uninstall the spike apps, and plan Phase 3.
 
 **Current setup:**
 
-- Phase 2 work is on branch `worktree-phase-2-plan`, built on `master`, and isn't merged or pushed yet. There is no `main` branch. Ask before every push.
+- Phase 2 was merged into `master` on 2026-11-09 and isn't pushed yet. There is no `main` branch. Ask before every push.
 - Build and phone driver: `tools/lantern.sh`. A fresh checkout needs `npm ci && npm run build` in `sources/js`, and `local.properties` with `sdk.dir`, `lantern.benchDir`, `lantern.modelDir` and `lantern.voicesDir` (see `app/build.gradle.kts`).
 - Debug builds include two screens, for checks from `adb`: `DebugActivity` (generate a chapter and time it) and `DebugPlayerActivity` (send commands to the player).
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
