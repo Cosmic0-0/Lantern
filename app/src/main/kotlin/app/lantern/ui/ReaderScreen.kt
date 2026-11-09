@@ -1,7 +1,6 @@
 package app.lantern.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -42,16 +40,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.lantern.core.Position
+import app.lantern.core.Sentence
 import app.lantern.lantern
 import app.lantern.library.Chapter
 import app.lantern.playback.Commands
@@ -60,21 +64,57 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Tag of a sentence's row in [ReaderContent]: "sentence-<index>". */
+/**
+ * Tag of the paragraph row in [ReaderContent] that starts with sentence [index]: "sentence-<index>". In a chapter
+ * stored before paragraphs (one sentence per paragraph), that is the sentence's own row.
+ */
 fun sentenceTag(index: Int) = "sentence-$index"
 
+/** A run of sentences shown as one row: their indexes, the joined text, and where each sentence starts in it. */
+internal class Paragraph(val sentences: IntRange, val text: String, val starts: IntArray) {
+    /** The sentence at character [offset] of [text]. */
+    fun sentenceAt(offset: Int): Int = sentences.first + (starts.indexOfLast { it <= offset }.coerceAtLeast(0))
+
+    fun startOf(sentence: Int): Int = starts[sentence - sentences.first]
+
+    /** Exclusive: the joining space after [sentence] is not part of it. */
+    fun endOf(sentence: Int): Int = if (sentence == sentences.last) text.length else starts[sentence - sentences.first + 1] - 1
+}
+
+/** [sentences] grouped into rows: each run of adjacent sentences with the same paragraph number, joined by a space. */
+internal fun paragraphsOf(sentences: List<Sentence>): List<Paragraph> {
+    val rows = ArrayList<Paragraph>()
+    var first = 0
+    while (first < sentences.size) {
+        var last = first
+        while (last + 1 < sentences.size && sentences[last + 1].paragraph == sentences[first].paragraph) last++
+        val starts = IntArray(last - first + 1)
+        val text = StringBuilder()
+        for (i in first..last) {
+            if (i > first) text.append(' ')
+            starts[i - first] = text.length
+            text.append(sentences[i].text)
+        }
+        rows += Paragraph(first..last, text.toString(), starts)
+        first = last + 1
+    }
+    return rows
+}
+
 /**
- * The chapter text, one row per sentence, with no state of its own about the player.
+ * The chapter text, one row per paragraph, with no state of its own about the player.
  *
- * - [highlighted] is the sentence being spoken, if it is in this chapter. It carries the `selected` semantics.
- * - While [following], the list scrolls to keep [highlighted] in view. A hand on the list calls
- *   `onFollowChange(false)`; the "Back to voice" button, shown while not following, calls `onFollowChange(true)`.
- *   The list's own scrolling never counts as a hand.
- * - After a scroll by hand has settled, [onFirstVisible] gets the first sentence that is fully on screen.
+ * - [highlighted] is the sentence being spoken, if it is in this chapter. Its paragraph's row carries the `selected`
+ *   semantics. Sentences in [skipped] are shown dimmed (docs/decisions/speech-rules.md).
+ * - Tapping a sentence calls [onTap] with its index.
+ * - While [following], the list scrolls to keep [highlighted] in view, inside a long paragraph too. A hand on the
+ *   list calls `onFollowChange(false)`; the "Back to voice" button, shown while not following, calls
+ *   `onFollowChange(true)`. The list's own scrolling never counts as a hand.
+ * - After a scroll by hand has settled, [onFirstVisible] gets the first sentence whose first line is fully on screen.
  */
 @Composable
 fun ReaderContent(
-    sentences: List<String>,
+    sentences: List<Sentence>,
     highlighted: Int?,
     following: Boolean,
     onTap: (Int) -> Unit,
@@ -82,9 +122,15 @@ fun ReaderContent(
     onFirstVisible: (Int) -> Unit,
     listState: LazyListState,
     modifier: Modifier = Modifier,
+    skipped: Set<Int> = emptySet(),
 ) {
     val latestFollowChange by rememberUpdatedState(onFollowChange)
     val latestFirstVisible by rememberUpdatedState(onFirstVisible)
+    val paragraphs = remember(sentences) { paragraphsOf(sentences) }
+    // Each row's text layout, by row index, for taps, following inside a paragraph and the first visible sentence.
+    // A plain map: a new layout must not cause another composition.
+    val layouts = remember(sentences) { HashMap<Int, TextLayoutResult>() }
+    val padTop = with(LocalDensity.current) { ROW_PADDING_V.roundToPx() }
 
     LaunchedEffect(listState) {
         var byHand = false
@@ -99,25 +145,41 @@ fun ReaderContent(
         snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
             if (!scrolling && byHand) {
                 byHand = false
-                firstFullyVisible(listState)?.let(latestFirstVisible)
+                firstFullyVisible(listState, paragraphs, layouts, padTop)?.let(latestFirstVisible)
             }
         }
     }
 
     LaunchedEffect(highlighted, following) {
         if (!following || highlighted == null || highlighted !in sentences.indices) return@LaunchedEffect
+        val row = paragraphs.indexOfFirst { highlighted in it.sentences }
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.isNotEmpty() }.first { it }
-        val info = listState.layoutInfo
-        val row = info.visibleItemsInfo.firstOrNull { it.index == highlighted }
-        val inView = row != null && row.offset >= 0 && row.offset + row.size <= info.viewportSize.height
-        // Leave a quarter of the screen above it, so what was just read stays in sight.
-        if (!inView) listState.animateScrollToItem(highlighted, -info.viewportSize.height / 4)
+        // A row that hasn't been laid out yet has no text layout: scroll to it, then look again with its layout.
+        repeat(2) {
+            val info = listState.layoutInfo
+            val viewport = info.viewportSize.height
+            val item = info.visibleItemsInfo.firstOrNull { it.index == row }
+            val layout = layouts[row]
+            val p = paragraphs[row]
+            val top = padTop + (layout?.let { it.getLineTop(it.getLineForOffset(p.startOf(highlighted))) }?.toInt() ?: 0)
+            val bottom = padTop + (layout?.let { it.getLineBottom(it.getLineForOffset(p.endOf(highlighted))) }?.toInt() ?: (item?.size ?: 0))
+            if (item != null && item.offset + top >= 0 && item.offset + bottom <= viewport) return@LaunchedEffect
+            // Leave a quarter of the screen above it, so what was just read stays in sight.
+            listState.animateScrollToItem(row, top - viewport / 4)
+            if (layout != null) return@LaunchedEffect
+        }
     }
 
     Box(modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(vertical = 16.dp)) {
-            itemsIndexed(sentences, key = { index, _ -> index }) { index, text ->
-                SentenceRow(index, text, highlighted = index == highlighted, onClick = { onTap(index) })
+            itemsIndexed(paragraphs, key = { _, p -> p.sentences.first }) { row, p ->
+                ParagraphRow(
+                    p,
+                    highlighted = highlighted?.takeIf { it in p.sentences },
+                    skipped = skipped,
+                    onTap = onTap,
+                    onLayout = { layouts[row] = it },
+                )
             }
         }
         if (!following) {
@@ -129,37 +191,79 @@ fun ReaderContent(
 }
 
 @Composable
-private fun SentenceRow(index: Int, text: String, highlighted: Boolean, onClick: () -> Unit) {
+private fun ParagraphRow(p: Paragraph, highlighted: Int?, skipped: Set<Int>, onTap: (Int) -> Unit, onLayout: (TextLayoutResult) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val text: AnnotatedString = remember(p, highlighted, skipped, colors) {
+        buildAnnotatedString {
+            append(p.text)
+            for (s in p.sentences) {
+                val style = when {
+                    s == highlighted -> SpanStyle(color = colors.onPrimaryContainer, background = colors.primaryContainer)
+                    s in skipped -> SpanStyle(color = colors.onSurface.copy(alpha = 0.45f))
+                    else -> continue
+                }
+                addStyle(style, p.startOf(s), p.endOf(s))
+            }
+        }
+    }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val latestTap by rememberUpdatedState(onTap)
     Text(
         text,
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 27.sp),
-        color = if (highlighted) colors.onPrimaryContainer else colors.onSurface,
+        color = colors.onSurface,
+        onTextLayout = {
+            layout = it
+            onLayout(it)
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp)
-            .testTag(sentenceTag(index))
+            .testTag(sentenceTag(p.sentences.first))
             .semantics {
-                selected = highlighted
-                if (highlighted) stateDescription = "Being read"
+                selected = highlighted != null
+                if (highlighted != null) stateDescription = "Being read"
+                // Accessibility services click the row as a whole: start from the sentence being read, or the first.
+                onClick { onTap(highlighted ?: p.sentences.first); true }
             }
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (highlighted) colors.primaryContainer else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = ROW_PADDING_V)
+            // After the padding, so tap positions are in the text layout's own coordinates.
+            .pointerInput(p) {
+                detectTapGestures { at ->
+                    val l = layout ?: return@detectTapGestures latestTap(p.sentences.first)
+                    latestTap(p.sentenceAt(l.getOffsetForPosition(at)))
+                }
+            },
     )
 }
 
-/** The first sentence whose top is on screen, or null before the list is measured. */
-internal fun firstFullyVisible(state: LazyListState): Int? {
+/**
+ * The first sentence whose first line is fully on screen, or null before the list is measured. A row whose text
+ * layout isn't known yet counts by its top only.
+ */
+internal fun firstFullyVisible(state: LazyListState, paragraphs: List<Paragraph>, layouts: Map<Int, TextLayoutResult>, padTop: Int): Int? {
     val rows = state.layoutInfo.visibleItemsInfo
-    return (rows.firstOrNull { it.offset >= 0 } ?: rows.firstOrNull())?.index
+    if (rows.isEmpty()) return null
+    for (row in rows) {
+        val p = paragraphs.getOrNull(row.index) ?: continue
+        val layout = layouts[row.index]
+        if (layout == null) {
+            if (row.offset >= 0) return p.sentences.first
+            continue
+        }
+        for (s in p.sentences) {
+            val top = row.offset + padTop + layout.getLineTop(layout.getLineForOffset(p.startOf(s))).toInt()
+            if (top >= 0) return s
+        }
+    }
+    return paragraphs.getOrNull(rows.first().index)?.sentences?.first
 }
 
 private sealed interface Load {
     data object Loading : Load
     class Failed(val message: String) : Load
-    class Ready(val chapterId: Long, val sentences: List<String>, val listState: LazyListState) : Load
+
+    /** [start] is where you are reading until a scroll by hand reports another sentence. */
+    class Ready(val chapterId: Long, val sentences: List<Sentence>, val skipped: Set<Int>, val start: Int, val listState: LazyListState) : Load
 }
 
 /**
@@ -192,13 +296,14 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
             load = Load.Loading
         }
         load = try {
-            val sentences = library.sentences(shown)
+            val text = library.chapterText(shown)
             val playing = player.state
             val start = when {
                 playing.chapterId == shown && playing.sentence != null -> playing.sentence
                 else -> library.position(bookId).first()?.takeIf { it.chapterId == shown }?.sentence ?: 0
-            }
-            Load.Ready(shown, sentences, LazyListState(start.coerceIn(0, sentences.lastIndex)))
+            }.coerceIn(0, text.sentences.lastIndex)
+            val row = paragraphsOf(text.sentences).indexOfFirst { start in it.sentences }.coerceAtLeast(0)
+            Load.Ready(shown, text.sentences, text.skipped, start, LazyListState(row))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -218,6 +323,9 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
     // A jump is recorded by the service as the new sentence starts, so look again whenever the sentence changes.
     LaunchedEffect(bookId, voice.chapterId, voice.sentence) { history = library.history(bookId) }
 
+    // Where you are reading in the shown chapter: where it opened, then the first sentence after each scroll by hand.
+    var readingAt by remember(load) { mutableIntStateOf((load as? Load.Ready)?.start ?: 0) }
+
     fun playPause() {
         val c = controller ?: return
         when {
@@ -226,8 +334,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
             // (docs/decisions/position-tracking.md), recorded as a jump so Undo goes back to the voice.
             voiceChapter == shown && following -> c.play()
             else -> {
-                val first = (load as? Load.Ready)?.let { firstFullyVisible(it.listState) } ?: 0
-                Commands.playFrom(c, Position(bookId, shown, first), jump = voiceChapter != null)
+                Commands.playFrom(c, Position(bookId, shown, readingAt), jump = voiceChapter != null)
                 following = true
             }
         }
@@ -262,6 +369,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
         nav = nav,
         bottomBar = {
             ReaderControls(
+                sleep = { controller?.let { SleepButton(player.sleep, it) } },
                 canUndo = history.isNotEmpty() && controller != null,
                 onUndo = ::undo,
                 speaking = speaking,
@@ -288,6 +396,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
                 is Load.Ready -> key(state) {
                     ReaderContent(
                         sentences = state.sentences,
+                        skipped = state.skipped,
                         highlighted = voice.takeIf { it.chapterId == state.chapterId }?.sentence,
                         // With no voice in this book there is nothing to be back to.
                         following = following || voiceChapter == null,
@@ -300,6 +409,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
                             if (on) voiceChapter?.let { shown = it }
                         },
                         onFirstVisible = { index ->
+                            readingAt = index
                             // While the voice is speaking, the service owns the position.
                             if (!speaking) scope.launch { library.savePosition(Position(bookId, state.chapterId, index)) }
                         },
@@ -313,6 +423,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
 
 @Composable
 private fun ReaderControls(
+    sleep: @Composable () -> Unit,
     canUndo: Boolean,
     onUndo: () -> Unit,
     speaking: Boolean,
@@ -323,7 +434,10 @@ private fun ReaderControls(
 ) {
     Surface(Modifier.fillMaxWidth(), tonalElevation = 3.dp) {
         Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 16.dp, vertical = 8.dp)) {
-            if (canUndo) TextButton(onClick = onUndo, Modifier.align(Alignment.End)) { Text("Undo jump") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                sleep()
+                if (canUndo) TextButton(onClick = onUndo) { Text("Undo jump") }
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = { onPrevious?.invoke() }, enabled = onPrevious != null) { Text("‹ Chapter") }
                 Button(onClick = onPlayPause, enabled = canPlay) { Text(if (speaking) "Pause" else "Play") }
@@ -333,4 +447,5 @@ private fun ReaderControls(
     }
 }
 
+private val ROW_PADDING_V = 6.dp
 private const val SPINNER_DELAY_MS = 200L

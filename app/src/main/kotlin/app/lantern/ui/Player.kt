@@ -171,7 +171,7 @@ fun MiniPlayer(nav: Nav) {
 
 /** "Sleep", or the minutes left, or "Sleep: chapter". Opens a menu to set, change or cancel the timer. */
 @Composable
-private fun SleepButton(sleep: SleepState, controller: MediaController) {
+internal fun SleepButton(sleep: SleepState, controller: MediaController) {
     var open by remember { mutableStateOf(false) }
     // Recounted every 15 s; the label shows whole minutes, rounded up.
     val now by produceState(System.currentTimeMillis(), sleep.at) {

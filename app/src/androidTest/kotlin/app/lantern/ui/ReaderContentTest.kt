@@ -5,15 +5,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.percentOffset
 import androidx.compose.ui.test.swipeUp
+import app.lantern.core.Sentence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -24,7 +27,8 @@ class ReaderContentTest {
     @get:Rule
     val rule = createComposeRule()
 
-    private val sentences = List(80) { "Sentence number $it, which is long enough to be a line of its own on a phone." }
+    // Stored before paragraphs: each sentence is its own paragraph, so each has its own row.
+    private val oldStyle = List(80) { Sentence("Sentence number $it, which is long enough to be a line of its own on a phone.", it) }
 
     private class Probe {
         val taps = mutableListOf<Int>()
@@ -35,7 +39,7 @@ class ReaderContentTest {
         val listState = LazyListState()
     }
 
-    private fun show(probe: Probe) = rule.setContent {
+    private fun show(probe: Probe, sentences: List<Sentence> = oldStyle) = rule.setContent {
         MaterialTheme {
             ReaderContent(
                 sentences = sentences,
@@ -60,6 +64,38 @@ class ReaderContentTest {
         rule.onNodeWithTag(sentenceTag(3)).performClick()
 
         assertEquals(listOf(3), probe.taps)
+    }
+
+    @Test
+    fun tappingTheSecondSentenceOfAParagraphReportsItsIndex() {
+        val probe = Probe()
+        val long = "Then the second sentence goes on and on, long enough to fill several lines of the paragraph on a phone screen, so its last line is far below the first."
+        show(probe, listOf(Sentence("Before.", 0), Sentence("Hi.", 1), Sentence(long, 1), Sentence("After.", 2)))
+
+        // Low in the paragraph's row: the first sentence, "Hi.", is on the first line only.
+        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(percentOffset(0.5f, 0.85f)) }
+        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(percentOffset(0.02f, 0.1f)) }
+
+        assertEquals(listOf(2, 1), probe.taps)
+    }
+
+    @Test
+    fun aChapterStoredBeforeParagraphsShowsOneSentencePerRow() {
+        val probe = Probe()
+        show(probe, oldStyle.take(3))
+
+        // Every sentence starts a row of its own; in a paragraph only the first sentence does.
+        (0..2).forEach { rule.onNodeWithTag(sentenceTag(it)).assertIsDisplayed() }
+    }
+
+    @Test
+    fun sentencesOfOneParagraphShareARow() {
+        val probe = Probe()
+        show(probe, listOf(Sentence("One.", 0), Sentence("Two.", 0), Sentence("Three.", 1)))
+
+        rule.onNodeWithTag(sentenceTag(0)).assertIsDisplayed()
+        rule.onNodeWithTag(sentenceTag(1)).assertDoesNotExist()
+        rule.onNodeWithTag(sentenceTag(2)).assertIsDisplayed()
     }
 
     @Test
@@ -119,5 +155,20 @@ class ReaderContentTest {
         rule.onNodeWithTag(sentenceTag(60)).assertIsDisplayed()
         assertTrue(probe.followChanges.isEmpty())
         assertTrue(probe.firstVisible.isEmpty())
+    }
+
+    @Test
+    fun followingReachesASentenceLowInALongParagraph() {
+        val probe = Probe()
+        // One paragraph far taller than the screen, then a short one.
+        val long = List(60) { Sentence("Sentence $it of a very long paragraph that keeps going for many lines.", 0) } + Sentence("End.", 1)
+        show(probe, long)
+
+        probe.highlighted = 55
+        rule.waitForIdle()
+
+        // The row starts far above the screen: following scrolled inside the paragraph, not just to its top.
+        assertTrue("first visible row ${probe.listState.firstVisibleItemIndex} offset ${probe.listState.firstVisibleItemScrollOffset}", probe.listState.firstVisibleItemScrollOffset > 0)
+        assertTrue(probe.followChanges.isEmpty())
     }
 }
