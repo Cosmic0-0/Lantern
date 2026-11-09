@@ -5,13 +5,14 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import app.lantern.core.Position
+import app.lantern.core.Sentence
 import app.lantern.library.Book
 import app.lantern.library.Chapter
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Plain queries only; every rule lives in `Library`. Queries that return `Book`, `Chapter` or `Position` select
- * exactly their columns, so Room fills them directly.
+ * Plain queries only; every rule lives in `Library`. Queries that return `Book`, `Chapter`, `Position` or
+ * `Sentence` select exactly their columns, so Room fills them directly.
  */
 @Dao
 internal interface LibraryDao {
@@ -82,8 +83,8 @@ internal interface LibraryDao {
     @Query("UPDATE chapter SET textHash = :hash WHERE id = :id")
     suspend fun setTextHash(id: Long, hash: String)
 
-    @Query("SELECT text FROM sentence WHERE chapterId = :chapterId ORDER BY idx")
-    suspend fun sentences(chapterId: Long): List<String>
+    @Query("SELECT text, paragraph FROM sentence WHERE chapterId = :chapterId ORDER BY idx")
+    suspend fun sentences(chapterId: Long): List<Sentence>
 
     @Query("SELECT COUNT(*) FROM sentence WHERE chapterId = :chapterId")
     suspend fun sentenceCount(chapterId: Long): Int

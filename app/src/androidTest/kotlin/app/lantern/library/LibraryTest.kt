@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import app.lantern.core.ChapterRef
 import app.lantern.core.Listing
 import app.lantern.core.Position
+import app.lantern.core.Sentence
 import app.lantern.core.TextPrep
 import app.lantern.data.LanternDatabase
 import java.io.IOException
@@ -74,6 +75,10 @@ class LibraryTest {
 
     private suspend fun chaptersOf(bookId: Long) = library.chapters(bookId).first()
 
+    /** The stored hash is the SHA-256 of the sentence texts joined with newlines, paragraphs not included. */
+    private fun hashOf(sentences: List<Sentence>): String =
+        MessageDigest.getInstance("SHA-256").digest(sentences.joinToString("\n") { it.text }.toByteArray()).joinToString("") { "%02x".format(it) }
+
     @Test
     fun addStoresTheBookAndAllChaptersInOrder() = runBlocking {
         val id = library.add(listing)
@@ -115,13 +120,11 @@ class LibraryTest {
         val expected = TextPrep.sentences(source.texts.getValue("/c/1"))
         assertTrue(expected.size > 1)
 
-        assertEquals(expected, library.sentences(chapter.id))
-        assertEquals(expected, library.sentences(chapter.id))
+        assertEquals(expected.map { it.text }, library.sentences(chapter.id))
+        assertEquals(expected.map { it.text }, library.sentences(chapter.id))
 
         assertEquals(listOf("/c/1"), source.textCalls)
-        val sha = MessageDigest.getInstance("SHA-256").digest(expected.joinToString("\n").toByteArray())
-        val hex = sha.joinToString("") { "%02x".format(it) }
-        assertEquals(hex, library.chapter(chapter.id)?.textHash)
+        assertEquals(hashOf(expected), library.chapter(chapter.id)?.textHash)
         assertEquals(expected.size, count("SELECT COUNT(*) FROM sentence WHERE chapterId = ?", chapter.id))
     }
 
@@ -140,7 +143,7 @@ class LibraryTest {
         assertNull(library.plan(chapter.id))
 
         source.failText = false
-        assertEquals(TextPrep.sentences(source.texts.getValue("/c/1")), library.sentences(chapter.id))
+        assertEquals(TextPrep.sentences(source.texts.getValue("/c/1")).map { it.text }, library.sentences(chapter.id))
         assertEquals(listOf("/c/1", "/c/1"), source.textCalls)
         assertNotNull(library.chapter(chapter.id)?.textHash)
     }
@@ -201,9 +204,84 @@ class LibraryTest {
         val chapter = chaptersOf(id).single()
         assertNotNull(chapter.textHash)
         val expected = TextPrep.sentences(text)
-        assertEquals(expected, library.sentences(chapter.id))
+        assertEquals(expected.map { it.text }, library.sentences(chapter.id))
         assertEquals(expected.size, library.plan(chapter.id)?.sentenceCount)
         assertTrue(source.textCalls.isEmpty())
+    }
+
+    @Test
+    fun pasteKeepsTheParagraphsAndTheTextHashIgnoresThem() = runBlocking {
+        val id = library.paste("It rained. Then it stopped.\nThe sun came out.")
+
+        val chapter = chaptersOf(id).single()
+        val text = library.chapterText(chapter.id)
+        assertEquals(
+            listOf(Sentence("It rained.", 0), Sentence("Then it stopped.", 0), Sentence("The sun came out.", 1)),
+            text.sentences,
+        )
+        assertEquals(emptySet<Int>(), text.skipped)
+        assertEquals(hashOf(text.sentences), chapter.textHash)
+        assertEquals(listOf("It rained.", "Then it stopped.", "The sun came out."), library.sentences(chapter.id))
+    }
+
+    @Test
+    fun aFetchedChapterStoresItsParagraphsAndIsFetchedOnce() = runBlocking {
+        val chapter = chaptersOf(library.add(listing)).first()
+        val expected = listOf(
+            Sentence("It rained all day.", 0),
+            Sentence("The street was empty.", 0),
+            Sentence("She walked home.", 1),
+            Sentence("Nobody noticed her.", 1),
+        )
+
+        assertEquals(ChapterText(expected, emptySet()), library.chapterText(chapter.id))
+        assertEquals(ChapterText(expected, emptySet()), library.chapterText(chapter.id))
+
+        assertEquals(listOf("/c/1"), source.textCalls)
+        assertEquals(1, count("SELECT paragraph FROM sentence WHERE chapterId = ? AND idx = 2", chapter.id))
+        assertEquals(hashOf(expected), library.chapter(chapter.id)?.textHash)
+        assertEquals(expected.map { it.text }, library.sentences(chapter.id))
+    }
+
+    @Test
+    fun chapterTextFailsLikeSentencesAndStoresNothing() = runBlocking {
+        val chapter = chaptersOf(library.add(listing)).first()
+
+        source.failText = true
+        try {
+            library.chapterText(chapter.id)
+            fail("expected an IOException")
+        } catch (_: IOException) {
+        }
+        assertEquals(0, count("SELECT COUNT(*) FROM sentence"))
+        assertNull(library.chapter(chapter.id)?.textHash)
+
+        try {
+            library.chapterText(-1)
+            fail("expected a NoSuchElementException")
+        } catch (_: NoSuchElementException) {
+        }
+
+        source.failText = false
+        assertEquals(4, library.chapterText(chapter.id).sentences.size)
+        assertEquals(listOf("/c/1", "/c/1"), source.textCalls)
+    }
+
+    @Test
+    fun aChapterStoredBeforeParagraphsReadsBackUnchanged() = runBlocking {
+        val chapter = chaptersOf(library.add(listing)).first()
+        // Schema 1 chapters came out of the migration with paragraph = idx and a text hash already set.
+        val sql = db.openHelper.writableDatabase
+        listOf("Old one.", "Old two.", "Old three.").forEachIndexed { i, text ->
+            sql.execSQL("INSERT INTO sentence (chapterId, idx, text, paragraph) VALUES (?, ?, ?, ?)", arrayOf<Any>(chapter.id, i, text, i))
+        }
+        sql.execSQL("UPDATE chapter SET textHash = 'old-hash' WHERE id = ?", arrayOf<Any>(chapter.id))
+
+        val expected = listOf(Sentence("Old one.", 0), Sentence("Old two.", 1), Sentence("Old three.", 2))
+        assertEquals(ChapterText(expected, emptySet()), library.chapterText(chapter.id))
+        assertEquals(listOf("Old one.", "Old two.", "Old three."), library.sentences(chapter.id))
+        assertTrue(source.textCalls.isEmpty())
+        assertEquals("old-hash", library.chapter(chapter.id)?.textHash)
     }
 
     @Test

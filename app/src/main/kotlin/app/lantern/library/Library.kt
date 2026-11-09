@@ -5,6 +5,7 @@ import app.lantern.core.ChapterPlan
 import app.lantern.core.History
 import app.lantern.core.Listing
 import app.lantern.core.Position
+import app.lantern.core.Sentence
 import app.lantern.core.TextPrep
 import app.lantern.data.BookEntity
 import app.lantern.data.ChapterEntity
@@ -33,6 +34,9 @@ data class Book(
 
 /** [textHash] is null until the chapter's text has been fetched. */
 data class Chapter(val id: Long, val bookId: Long, val number: Int, val title: String, val textHash: String?)
+
+/** A chapter's sentences with their paragraphs, and the indexes of the sentences a skip rule silences. */
+data class ChapterText(val sentences: List<Sentence>, val skipped: Set<Int>)
 
 /**
  * The books you added: their chapters, sentences, positions and history. Hides Room, the sources module and
@@ -74,7 +78,7 @@ class Library(
         return db.withTransaction {
             val bookId = dao.insertBook(BookEntity(sourceId = null, path = null, title = title, coverUrl = null, addedAt = clock()))
             val chapterId = dao.insertChapter(ChapterEntity(bookId = bookId, number = 0, path = null, title = title, textHash = textHash(sentences)))
-            dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s, paragraph = i) })
+            dao.insertSentences(sentenceEntities(chapterId, sentences))
             bookId
         }
     }
@@ -96,19 +100,24 @@ class Library(
     suspend fun nextChapter(chapterId: Long): Chapter? = dao.nextChapter(chapterId)
 
     /**
-     * The chapter's sentences. The first call fetches the text through [ChapterSource], splits it and stores the
-     * sentences and the text hash in one transaction; later calls read the database only. Throws [IOException]
-     * if fetching fails or leaves nothing to read, and stores nothing then. Throws [NoSuchElementException] for
-     * a chapter that doesn't exist (or was deleted meanwhile).
+     * The chapter's sentences with their paragraphs. The first call fetches the text through [ChapterSource],
+     * splits it and stores the sentences and the text hash in one transaction; later calls read the database
+     * only. Throws [IOException] if fetching fails or leaves nothing to read, and stores nothing then. Throws
+     * [NoSuchElementException] for a chapter that doesn't exist (or was deleted meanwhile). Nothing is skipped yet.
      */
-    suspend fun sentences(chapterId: Long): List<String> {
+    suspend fun chapterText(chapterId: Long): ChapterText = ChapterText(storedSentences(chapterId), emptySet())
+
+    /** [chapterText] without the paragraphs, for callers that need only the text. Fetches and throws the same way. */
+    suspend fun sentences(chapterId: Long): List<String> = storedSentences(chapterId).map { it.text }
+
+    private suspend fun storedSentences(chapterId: Long): List<Sentence> {
         dao.chapterEntity(chapterId)?.takeIf { it.textHash != null }?.let { return dao.sentences(chapterId) }
         // The reader and read-ahead often ask for the same chapter at once. One fetch at a time means the second
         // caller finds the text stored instead of fetching it again; requests to a site are one at a time anyway.
         return fetchLock.withLock { fetchSentences(chapterId) }
     }
 
-    private suspend fun fetchSentences(chapterId: Long): List<String> {
+    private suspend fun fetchSentences(chapterId: Long): List<Sentence> {
         val chapter = dao.chapterEntity(chapterId) ?: throw NoSuchElementException("No chapter $chapterId")
         if (chapter.textHash != null) return dao.sentences(chapterId)
         val sourceId = dao.book(chapter.bookId)?.sourceId
@@ -124,7 +133,7 @@ class Library(
                 // Fetched by someone else meanwhile: keep what is stored so sentence numbers stay put.
                 dao.sentences(chapterId)
             } else {
-                dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s, paragraph = i) })
+                dao.insertSentences(sentenceEntities(chapterId, sentences))
                 dao.setTextHash(chapterId, textHash(sentences))
                 sentences
             }
@@ -207,8 +216,11 @@ class Library(
     private companion object {
         const val TITLE_MAX = 80
 
-        /** Lowercase hex SHA-256 of the sentences joined with newlines. */
-        fun textHash(sentences: List<String>): String =
-            MessageDigest.getInstance("SHA-256").digest(sentences.joinToString("\n").toByteArray()).toHexString()
+        fun sentenceEntities(chapterId: Long, sentences: List<Sentence>): List<SentenceEntity> =
+            sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s.text, s.paragraph) }
+
+        /** Lowercase hex SHA-256 of the sentence texts joined with newlines. Paragraphs are not part of it. */
+        fun textHash(sentences: List<Sentence>): String =
+            MessageDigest.getInstance("SHA-256").digest(sentences.joinToString("\n") { it.text }.toByteArray()).toHexString()
     }
 }
