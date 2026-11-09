@@ -6,7 +6,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 ## Where things stand
 
-Start here when picking this up in a new chat. Last updated 2026-11-08.
+Start here when picking this up in a new chat. Last updated 2026-11-09.
 
 The plan, reference review, site tests and phone voice tests are done. No app code exists, and you haven't approved the plan yet, so nothing gets built until you do.
 
@@ -15,7 +15,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 1. ~~Choose a voice setup.~~ Done 2026-11-08: Phonon 31M with voices Everly and Trevor, which you preferred to Supertonic and which ran faster on the phone. See [TTS engine](docs/decisions/voice-engine.md#your-choice).
 2. ~~Decide on the laptop precompute idea.~~ Dropped 2026-11-08, because no better model than Phonon fits the laptop's 4 GB GPU. It may return if better models come out. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 3. ~~Check the phone-made Phonon samples.~~ Done 2026-11-08: samples 12 and 13, made on the phone, sound the same to you as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
-4. You answer the rest of the [open questions](#open-questions).
+4. You answer the last [open question](#open-questions), fresh build or LNReader fork. The site list and English only were answered 2026-11-09.
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
 6. You approve the plan, then Phase 1 starts.
 
@@ -39,6 +39,7 @@ Your answers set these constraints:
 - Only one chapter past the current one gets loaded ahead, no more.
 - Lantern is the phone app alone. A laptop app is dropped for now and may return if better voice models come out.
 - Battery and heat aren't tuned or measured in version 1, as long as Lantern never runs the phone flat out. If it overheats, optimizing comes then. Decided 2026-11-08.
+- English only, for both the sites and the voice. Decided 2026-11-09.
 - A wait under 2 minutes before audio starts is acceptable. Phonon starts in under half a second, so this no longer shapes the design.
 
 "Never loses my place" needs a test, so this is the definition I propose: after a pause, app switch, phone call, Bluetooth drop, force stop or reboot, playback resumes within one sentence of where the audio stopped.
@@ -115,9 +116,9 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 Decisions for you:
 
-1. **Is the [default site list](docs/research/site-tests.md) OK?** I recommend leaving sites that object off by default. You can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
-2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it.
-3. **English only?** I assumed yes. Other languages would change the voice comparison.
+1. ~~Is the [default site list](docs/research/site-tests.md) OK?~~ Answered 2026-11-09: yes. Sites that object stay off by default, and you can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
+2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it. The trade-offs are in [App type](docs/decisions/app-type.md), under "Build fresh or fork?".
+3. ~~English only?~~ Answered 2026-11-09: yes, English only.
 4. ~~Which voice setup?~~ Answered 2026-11-08: Phonon 31M, voices Everly and Trevor.
 5. ~~Laptop precompute?~~ Answered 2026-11-08: dropped for now, kept as a future possibility. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 
