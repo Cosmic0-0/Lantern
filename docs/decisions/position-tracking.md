@@ -4,7 +4,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 | Approach | Accuracy | Survives a voice or speed change | Highlight and tap to jump | Verdict |
 |---|---|---|---|---|
-| Scroll percentage, as in [Lumina](../research/reference-review.md) | Low, shifts with layout | Yes, but vaguely | No | Rejected |
+| Scroll percentage | Low, shifts with layout | Yes, but vaguely | No | Rejected |
 | Time in a chapter audio file | Exact for one voice | No | Needs a timing map | Rejected, breaks when you change voice or the audio is regenerated |
 | Paragraph, as in LNReader | Can rewind a minute or more | Yes | Coarse | Rejected |
 | Sentence, stored against the text | Within one sentence | Yes | Yes | Recommended |
