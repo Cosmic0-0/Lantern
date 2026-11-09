@@ -62,6 +62,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
         title = book?.title.orEmpty(),
         nav = nav,
         actions = {
+            TextButton(onClick = { nav.open(Screen.Rules(bookId)) }) { Text("Rules") }
             // Pasted text has no source to switch from.
             if (book?.sourceId != null) TextButton(onClick = { nav.open(Screen.SwitchSource(bookId)) }) { Text("Switch source") }
         },
