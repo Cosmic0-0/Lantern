@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -34,6 +35,7 @@ class ReaderContentTest {
 
     private class Probe {
         val taps = mutableListOf<Int>()
+        val longPresses = mutableListOf<Int>()
         val followChanges = mutableListOf<Boolean>()
         val firstVisible = mutableListOf<Int>()
         var following by mutableStateOf(true)
@@ -48,6 +50,7 @@ class ReaderContentTest {
                 highlighted = probe.highlighted,
                 following = probe.following,
                 onTap = { probe.taps += it },
+                onLongPress = { probe.longPresses += it },
                 onFollowChange = {
                     probe.followChanges += it
                     probe.following = it
@@ -80,6 +83,21 @@ class ReaderContentTest {
         rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(Offset(20.dp.toPx(), 16.dp.toPx())) }
 
         assertEquals(listOf(2, 1), probe.taps)
+    }
+
+    @Test
+    fun aLongPressNamesTheSameSentenceATapWould() {
+        val probe = Probe()
+        val long = "Then the second sentence goes on and on, long enough to fill several lines of the paragraph on a phone screen, so its last line is far below the first."
+        show(probe, listOf(Sentence("Before.", 0), Sentence("Hi.", 1), Sentence(long, 1), Sentence("After.", 2)))
+
+        rule.onNodeWithTag(sentenceTag(0)).performTouchInput { longClick() }
+        // The same two spots as in the tap test above: low in the paragraph's row, then on the "H" of "Hi.".
+        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { longClick(percentOffset(0.5f, 0.85f)) }
+        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { longClick(Offset(20.dp.toPx(), 16.dp.toPx())) }
+
+        assertEquals(listOf(0, 2, 1), probe.longPresses)
+        assertTrue("a long-press is not also a tap: ${probe.taps}", probe.taps.isEmpty())
     }
 
     @Test

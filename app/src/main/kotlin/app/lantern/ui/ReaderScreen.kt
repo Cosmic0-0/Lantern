@@ -40,11 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -106,7 +108,7 @@ internal fun paragraphsOf(sentences: List<Sentence>): List<Paragraph> {
  *
  * - [highlighted] is the sentence being spoken, if it is in this chapter. Its paragraph's row carries the `selected`
  *   semantics. Sentences in [skipped] are shown dimmed (docs/decisions/speech-rules.md).
- * - Tapping a sentence calls [onTap] with its index.
+ * - Tapping a sentence calls [onTap] with its index; pressing and holding it calls [onLongPress] with the same index.
  * - While [following], the list scrolls to keep [highlighted] in view, inside a long paragraph too. A hand on the
  *   list calls `onFollowChange(false)`; the "Back to voice" button, shown while not following, calls
  *   `onFollowChange(true)`. The list's own scrolling never counts as a hand.
@@ -123,6 +125,7 @@ fun ReaderContent(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     skipped: Set<Int> = emptySet(),
+    onLongPress: (Int) -> Unit = {},
 ) {
     val latestFollowChange by rememberUpdatedState(onFollowChange)
     val latestFirstVisible by rememberUpdatedState(onFirstVisible)
@@ -178,6 +181,7 @@ fun ReaderContent(
                     highlighted = highlighted?.takeIf { it in p.sentences },
                     skipped = skipped,
                     onTap = onTap,
+                    onLongPress = onLongPress,
                     onLayout = { layouts[row] = it },
                 )
             }
@@ -191,7 +195,14 @@ fun ReaderContent(
 }
 
 @Composable
-private fun ParagraphRow(p: Paragraph, highlighted: Int?, skipped: Set<Int>, onTap: (Int) -> Unit, onLayout: (TextLayoutResult) -> Unit) {
+private fun ParagraphRow(
+    p: Paragraph,
+    highlighted: Int?,
+    skipped: Set<Int>,
+    onTap: (Int) -> Unit,
+    onLongPress: (Int) -> Unit,
+    onLayout: (TextLayoutResult) -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
     val text: AnnotatedString = remember(p, highlighted, skipped, colors) {
         buildAnnotatedString {
@@ -208,6 +219,7 @@ private fun ParagraphRow(p: Paragraph, highlighted: Int?, skipped: Set<Int>, onT
     }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val latestTap by rememberUpdatedState(onTap)
+    val latestLongPress by rememberUpdatedState(onLongPress)
     Text(
         text,
         style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 27.sp),
@@ -224,14 +236,17 @@ private fun ParagraphRow(p: Paragraph, highlighted: Int?, skipped: Set<Int>, onT
                 if (highlighted != null) stateDescription = "Being read"
                 // Accessibility services click the row as a whole: start from the sentence being read, or the first.
                 onClick { onTap(highlighted ?: p.sentences.first); true }
+                onLongClick("Add a rule") { onLongPress(highlighted ?: p.sentences.first); true }
             }
             .padding(horizontal = 16.dp, vertical = ROW_PADDING_V)
             // After the padding, so tap positions are in the text layout's own coordinates.
             .pointerInput(p) {
-                detectTapGestures { at ->
-                    val l = layout ?: return@detectTapGestures latestTap(p.sentences.first)
-                    latestTap(p.sentenceAt(l.getOffsetForPosition(at)))
-                }
+                // A tap and a long-press on the same spot name the same sentence.
+                fun sentenceAt(at: Offset): Int = layout?.let { p.sentenceAt(it.getOffsetForPosition(at)) } ?: p.sentences.first
+                detectTapGestures(
+                    onTap = { at -> latestTap(sentenceAt(at)) },
+                    onLongPress = { at -> latestLongPress(sentenceAt(at)) },
+                )
             },
     )
 }
@@ -262,8 +277,19 @@ private sealed interface Load {
     data object Loading : Load
     class Failed(val message: String) : Load
 
-    /** [start] is where you are reading until a scroll by hand reports another sentence. */
-    class Ready(val chapterId: Long, val sentences: List<Sentence>, val skipped: Set<Int>, val start: Int, val listState: LazyListState) : Load
+    /**
+     * [start] is where you are reading until a scroll by hand reports another sentence. [skipped] changes when a rule
+     * is saved, and nothing else about the chapter does, so the scroll position and [start] stay.
+     */
+    class Ready(
+        val chapterId: Long,
+        val sentences: List<Sentence>,
+        skipped: Set<Int>,
+        val start: Int,
+        val listState: LazyListState,
+    ) : Load {
+        var skipped: Set<Int> by mutableStateOf(skipped)
+    }
 }
 
 /**
@@ -325,6 +351,32 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
 
     // Where you are reading in the shown chapter: where it opened, then the first sentence after each scroll by hand.
     var readingAt by remember(load) { mutableIntStateOf((load as? Load.Ready)?.start ?: 0) }
+
+    // The sentence whose rule sheet is open, if any. A chapter that loads again closes it.
+    var ruleFor by remember(load) { mutableStateOf<String?>(null) }
+    var ruleError by remember(ruleFor) { mutableStateOf<String?>(null) }
+    var savingRule by remember { mutableStateOf(false) }
+
+    fun saveRule(state: Load.Ready, draft: RuleDraft) {
+        if (savingRule) return
+        savingRule = true
+        ruleError = null
+        scope.launch {
+            try {
+                library.addRule(if (draft.allBooks) null else bookId, draft.kind, draft.term, draft.replacement)
+                controller?.let { Commands.rulesChanged(it) }
+                // Only what is dimmed changes, so the chapter stays where it is scrolled.
+                state.skipped = library.chapterText(state.chapterId).skipped
+                ruleFor = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) { // a blank term or respelling comes back as an IllegalArgumentException with its reason
+                ruleError = e.message ?: e.toString()
+            } finally {
+                savingRule = false
+            }
+        }
+    }
 
     fun playPause() {
         val c = controller ?: return
@@ -414,7 +466,19 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
                             if (!speaking) scope.launch { library.savePosition(Position(bookId, state.chapterId, index)) }
                         },
                         listState = state.listState,
+                        onLongPress = { index -> ruleFor = state.sentences[index].text },
                     )
+                    ruleFor?.let { sentence ->
+                        RuleSheet(
+                            sentence = sentence,
+                            sentences = state.sentences,
+                            error = ruleError,
+                            saving = savingRule,
+                            onPreview = controller?.let { c -> { text: String -> Commands.preview(c, text) } },
+                            onSave = { saveRule(state, it) },
+                            onDismiss = { ruleFor = null },
+                        )
+                    }
                 }
             }
         }
