@@ -185,8 +185,20 @@ class PlaybackService : MediaSessionService() {
         armChapterEnd() // the last sentence may be playing already
         generator.textArrived()
         EventLog.log("NEXT", "appended chapter=${chapter.id} items=${items.size} ended=$wasEnded ${EventLog.state(this)}")
-        // Playback already ran off the end while the chapter was being fetched: carry on into it.
-        if (wasEnded) player.seekTo(player.mediaItemCount - items.size, 0)
+        // Playback already ran off the end while the chapter was being fetched: carry on into it. With "end of
+        // chapter" set, the chapter has ended, so stand paused on the new chapter's first sentence instead.
+        if (wasEnded) {
+            val first = player.mediaItemCount - items.size
+            if (sleepAtChapterEnd) {
+                sleepAtChapterEnd = false
+                EventLog.log("SLEEP", "end of chapter, paused before the next one (it arrived late)")
+                player.pause()
+                player.seekTo(if (spokenTitle) first + 1 else first, 0)
+                publishSleep()
+            } else {
+                player.seekTo(first, 0)
+            }
+        }
     }
 
     /** Ends the playlist with [text] spoken. Playback stops after it, at the last sentence. */
