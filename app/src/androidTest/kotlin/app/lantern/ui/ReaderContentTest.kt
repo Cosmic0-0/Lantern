@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.percentOffset
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import app.lantern.core.Sentence
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -74,7 +76,8 @@ class ReaderContentTest {
 
         // Low in the paragraph's row: the first sentence, "Hi.", is on the first line only.
         rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(percentOffset(0.5f, 0.85f)) }
-        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(percentOffset(0.02f, 0.1f)) }
+        // On the "H" of "Hi.": just inside the row's 16dp side and 6dp top padding, where the text starts.
+        rule.onNodeWithTag(sentenceTag(1)).performTouchInput { click(Offset(20.dp.toPx(), 16.dp.toPx())) }
 
         assertEquals(listOf(2, 1), probe.taps)
     }
