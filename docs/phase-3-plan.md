@@ -129,6 +129,18 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - `take-focus` pauses playback and saves, and playback resumes on its own within one sentence when focus returns.
 
   A real phone call is still needed, in step 10.
+- **Result, 2026-11-09:** passed on the A26 from `adb`:
+
+  | Check | Result |
+  |---|---|
+  | `take-focus` (call stand-in) | Paused during sentence 18 and saved it. When focus came back 20 s later, playback resumed by itself from sentence 18 |
+  | 1-minute timer, screen off | Fired during sentence 36, which played to its end, then paused and saved 36 |
+  | End of chapter, screen off | Paused after chapter 3's last sentence. Saved chapter 4, sentence 0, so Continue starts the next chapter |
+  | Timer runs out while paused | Logged "time up while paused, cleared" and did nothing else |
+
+  - The mini player has a Sleep button with 15, 30, 45 and 60 minutes, End of chapter and Cancel, and shows the minutes left.
+  - I fixed one gap before merging. If the next chapter arrives only after the current one has ended, an end-of-chapter timer now pauses on the new chapter's first sentence instead of carrying on.
+  - Not checked: the button and countdown seen on screen. There's no sleep control on the reader screen yet; it could be added in step 3.
 
 ### 8. Switching source (`core` and screen by Sonnet, `Library` by me)
 

@@ -65,6 +65,13 @@ class PlaybackService : MediaSessionService() {
     private var startJob: Job? = null
     private var nextJob: Job? = null
 
+    // Sleep timer (docs/decisions/phase-3-assumptions.md). Not saved: a killed service has stopped playing anyway.
+    private var sleepAt: Long? = null // when a timed sleep is due, epoch ms
+    private var sleepJob: Job? = null
+    private var sleepAtChapterEnd = false // stop before the next chapter
+    private var stopAfterItem = false // time is up: pause when the item playing ends
+    private var chapterEndArmed = false // the item playing is the last before the next chapter
+
     override fun onCreate() {
         super.onCreate()
         EventLog.log("SERVICE", "create")
@@ -175,10 +182,23 @@ class PlaybackService : MediaSessionService() {
         val wasEnded = player.playbackState == Player.STATE_ENDED
         player.addMediaItems(items)
         appended += chapter.id
+        armChapterEnd() // the last sentence may be playing already
         generator.textArrived()
         EventLog.log("NEXT", "appended chapter=${chapter.id} items=${items.size} ended=$wasEnded ${EventLog.state(this)}")
-        // Playback already ran off the end while the chapter was being fetched: carry on into it.
-        if (wasEnded) player.seekTo(player.mediaItemCount - items.size, 0)
+        // Playback already ran off the end while the chapter was being fetched: carry on into it. With "end of
+        // chapter" set, the chapter has ended, so stand paused on the new chapter's first sentence instead.
+        if (wasEnded) {
+            val first = player.mediaItemCount - items.size
+            if (sleepAtChapterEnd) {
+                sleepAtChapterEnd = false
+                EventLog.log("SLEEP", "end of chapter, paused before the next one (it arrived late)")
+                player.pause()
+                player.seekTo(if (spokenTitle) first + 1 else first, 0)
+                publishSleep()
+            } else {
+                player.seekTo(first, 0)
+            }
+        }
     }
 
     /** Ends the playlist with [text] spoken. Playback stops after it, at the last sentence. */
@@ -248,6 +268,93 @@ class PlaybackService : MediaSessionService() {
         appended.retainAll(appended.dropWhile { it != chapterId }.toSet())
     }
 
+    // ---- Sleep timer ----
+
+    /** [minutes] > 0 sets a timed sleep, [Commands.SLEEP_END_OF_CHAPTER] stops before the next chapter, 0 cancels. */
+    private fun setSleep(minutes: Int) {
+        sleepJob?.cancel()
+        sleepJob = null
+        sleepAt = null
+        sleepAtChapterEnd = false
+        stopAfterItem = false
+        when {
+            minutes > 0 -> {
+                val at = System.currentTimeMillis() + minutes * 60_000L
+                sleepAt = at
+                sleepJob = scope.launch {
+                    delay(at - System.currentTimeMillis())
+                    onSleepTime()
+                }
+            }
+            minutes == Commands.SLEEP_END_OF_CHAPTER -> sleepAtChapterEnd = true
+        }
+        EventLog.log("SLEEP", "set minutes=$minutes")
+        armChapterEnd()
+        publishSleep()
+    }
+
+    private fun onSleepTime() {
+        sleepJob = null
+        sleepAt = null
+        if (player.playWhenReady) {
+            EventLog.log("SLEEP", "time up, pausing after this item")
+            stopAfterItem = true
+            updatePauseAtEnd()
+        } else {
+            EventLog.log("SLEEP", "time up while paused, cleared")
+        }
+        publishSleep()
+    }
+
+    /**
+     * For "end of chapter": arms a pause at the end of the item playing when it is the chapter's last sentence and the
+     * next chapter (its spoken title or first sentence) follows. Evaluated on every item change, on play and when a
+     * chapter is appended. A notice next ("No more chapters yet") isn't a chapter, so it still plays.
+     */
+    private fun armChapterEnd() {
+        chapterEndArmed = sleepAtChapterEnd && run {
+            val here = parse(player.currentMediaItem?.mediaId) ?: return@run false
+            val i = player.currentMediaItemIndex + 1
+            if (i >= player.mediaItemCount) return@run false
+            val next = player.getMediaItemAt(i).mediaId
+            next.startsWith(TITLE_PREFIX) || parse(next)?.let { it.first != here.first } == true
+        }
+        updatePauseAtEnd()
+    }
+
+    private fun updatePauseAtEnd() {
+        player.pauseAtEndOfMediaItems = stopAfterItem || chapterEndArmed
+    }
+
+    /** The player paused itself at the end of an item, which only the sleep timer asks for. */
+    private fun onSleepPause() {
+        if (chapterEndArmed) {
+            // Stand on the next chapter's first sentence, paused, so it is the saved position and Continue starts it.
+            // Cleared before the seek, whose item change re-runs armChapterEnd.
+            sleepAtChapterEnd = false
+            chapterEndArmed = false
+            var next = player.currentMediaItemIndex + 1
+            if (player.getMediaItemAt(next).mediaId.startsWith(TITLE_PREFIX) && next + 1 < player.mediaItemCount) next++
+            EventLog.log("SLEEP", "end of chapter, paused before the next one")
+            player.seekTo(next, 0)
+        } else {
+            EventLog.log("SLEEP", "time up, paused")
+        }
+        stopAfterItem = false
+        chapterEndArmed = false
+        updatePauseAtEnd()
+        publishSleep()
+    }
+
+    private fun publishSleep() {
+        session.setSessionExtras(
+            Bundle().apply {
+                sleepAt?.let { putLong(Commands.EXTRA_SLEEP_AT, it) }
+                if (sleepAtChapterEnd) putBoolean(Commands.EXTRA_SLEEP_END_OF_CHAPTER, true)
+            },
+        )
+    }
+
     // ---- Position ----
 
     private fun savePosition(reason: String) {
@@ -276,6 +383,7 @@ class PlaybackService : MediaSessionService() {
 
     private inner class PlayerListener : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            armChapterEnd()
             val (chapterId, index) = parse(mediaItem?.mediaId) ?: return
             val p = Position(bookId, chapterId, index)
             EventLog.log("PLAY", "chapter=$chapterId sentence=$index reason=$reason")
@@ -299,6 +407,21 @@ class PlaybackService : MediaSessionService() {
                 if (last != null) {
                     player.pause()
                     player.seekTo(last, 0)
+                }
+            }
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            when {
+                playWhenReady -> armChapterEnd()
+                reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM -> onSleepPause()
+                else -> {
+                    // Paused some other way. A timed stop that was waiting for the item to end is done;
+                    // "end of chapter" re-arms when play starts again.
+                    if (stopAfterItem) EventLog.log("SLEEP", "time up, paused before the item ended")
+                    stopAfterItem = false
+                    chapterEndArmed = false
+                    updatePauseAtEnd()
                 }
             }
         }
@@ -327,6 +450,7 @@ class PlaybackService : MediaSessionService() {
                         .add(SessionCommand(Commands.PLAY_FROM, Bundle.EMPTY))
                         .add(SessionCommand(Commands.CONTINUE, Bundle.EMPTY))
                         .add(SessionCommand(Commands.SET_VOICE, Bundle.EMPTY))
+                        .add(SessionCommand(Commands.SLEEP, Bundle.EMPTY))
                         .build(),
                 )
                 .build()
@@ -358,6 +482,7 @@ class PlaybackService : MediaSessionService() {
                     // Item addresses name the voice, so rebuild the playlist from the sentence playing now.
                     currentPosition()?.let { startAt(it, player.playWhenReady) }
                 }
+                Commands.SLEEP -> setSleep(args.getInt(Commands.ARG_SLEEP_MINUTES, 0))
                 else -> return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
