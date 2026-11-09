@@ -7,7 +7,50 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TextPrepTest {
-    private fun sentences(text: String) = TextPrep.sentences(text)
+    private fun sentences(text: String) = TextPrep.sentences(text).map { it.text }
+
+    private fun paragraphs(text: String) = TextPrep.sentences(text).map { it.paragraph }
+
+    // Paragraph numbers
+
+    @Test
+    fun paragraphNumbersFollowTheLinesOfADialogueChapter() {
+        val text = "\"Where are you going?\" she asked.\n\"Out.\"\n\"Why?\"\n\"No reason.\" He shut the door."
+        assertEquals(
+            listOf(
+                Sentence("\"Where are you going?\"", 0),
+                Sentence("she asked.", 0),
+                Sentence("\"Out.\"", 1),
+                Sentence("\"Why?\"", 2),
+                Sentence("\"No reason.\"", 3),
+                Sentence("He shut the door.", 3),
+            ),
+            TextPrep.sentences(text),
+        )
+    }
+
+    @Test
+    fun junkLineBetweenTwoParagraphsDoesNotUseUpANumber() {
+        val text = "He turned away.\nREAD MORE ChapterS HERE : https://beastnovels.com/\nnovgo.net\nShe followed him."
+        assertEquals(listOf(Sentence("He turned away.", 0), Sentence("She followed him.", 1)), TextPrep.sentences(text))
+    }
+
+    @Test
+    fun lineWithNoSentencesDoesNotUseUpANumber() {
+        assertEquals(listOf(0, 1, 2), paragraphs("One.\n...\nTwo.\n😉\nThree."))
+    }
+
+    @Test
+    fun paragraphThatSplitsIntoSeveralSentencesSharesOneNumber() {
+        val text = "It rained. Then it stopped. The sun came out.\nNext."
+        assertEquals(listOf("It rained.", "Then it stopped.", "The sun came out.", "Next."), sentences(text))
+        assertEquals(listOf(0, 0, 0, 1), paragraphs(text))
+    }
+
+    @Test
+    fun blankLineBetweenParagraphsDoesNotUseUpANumber() {
+        assertEquals(listOf(0, 1, 2), paragraphs("One.\n\nTwo.\n   \nThree.\r\n\r\n"))
+    }
 
     // Junk lines
 
@@ -145,11 +188,17 @@ class TextPrepTest {
         }
         for (file in chapters) {
             val text = file.readText()
-            val sentences = TextPrep.sentences(text)
+            val numbered = TextPrep.sentences(text)
+            val sentences = numbered.map { it.text }
             val lines = Normalizer.normalize(text, Normalizer.Form.NFKC).split('\n').map { it.trim() }.filter { it.isNotEmpty() }
             val cleaned = lines.map { it to TextPrep.cleanLine(it) }
 
-            println("${file.name}: ${sentences.size} sentences")
+            // Paragraphs count up from 0 with no gaps, so a dropped line never leaves a hole.
+            val paragraphs = numbered.map { it.paragraph }
+            assertEquals((0..paragraphs.last()).toList(), paragraphs.distinct(), "${file.name}: paragraph numbers have a gap")
+            assertEquals(paragraphs.sorted(), paragraphs, "${file.name}: paragraph numbers go backwards")
+
+            println("${file.name}: ${sentences.size} sentences in ${paragraphs.last() + 1} paragraphs")
             for ((line, clean) in cleaned) {
                 when {
                     clean == null -> println("  dropped: $line")

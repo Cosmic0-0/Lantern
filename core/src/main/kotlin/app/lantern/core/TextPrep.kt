@@ -3,14 +3,18 @@ package app.lantern.core
 import java.text.Normalizer
 
 object TextPrep {
-    /** Chapter text (one paragraph per line) to the ordered sentences Lantern reads and speaks. */
-    fun sentences(chapterText: String): List<String> =
+    /**
+     * Chapter text (one paragraph per line) to the ordered sentences Lantern reads and speaks. Each line that
+     * yields a sentence takes the next paragraph number, from 0; a line dropped as junk, or left with nothing to
+     * read, does not use one up.
+     */
+    fun sentences(chapterText: String): List<Sentence> =
         Normalizer.normalize(chapterText, Normalizer.Form.NFKC)
             .split('\n')
             .mapNotNull(::cleanLine)
-            .flatMap(::splitParagraph)
-            .map { it.trim() }
-            .filter { piece -> piece.any { it.isLetterOrDigit() } }
+            .map { line -> splitParagraph(line).map { it.trim() }.filter { piece -> piece.any { it.isLetterOrDigit() } } }
+            .filter { it.isNotEmpty() }
+            .flatMapIndexed { paragraph, pieces -> pieces.map { Sentence(it, paragraph) } }
 
     // A URL or bare domain: optional scheme, dotted labels, a TLD of 2 to 6 letters, optional path. The TLD must
     // be all lower or all upper case, so a missing space after a full stop ("left.Then") is not taken for a domain.
