@@ -173,6 +173,15 @@ class Library(
     /** The positions jumped away from, newest first. */
     suspend fun history(bookId: Long): List<Position> = dao.history(bookId)
 
+    /** Removes the newest history entry and returns it, or null when the book has none. For undoing a jump. */
+    suspend fun popHistory(bookId: Long): Position? = db.withTransaction {
+        val old = dao.history(bookId)
+        val newest = old.firstOrNull() ?: return@withTransaction null
+        dao.deleteHistory(bookId)
+        dao.insertHistory(old.drop(1).mapIndexed { rank, p -> HistoryEntity(bookId = p.bookId, chapterId = p.chapterId, sentence = p.sentence, rank = rank) })
+        newest
+    }
+
     /**
      * Fetches the chapter list again and appends the chapters whose path isn't listed yet, numbered after the
      * last. Existing chapters, text and sentences are untouched. Returns how many were added; 0 for pasted text.

@@ -296,6 +296,32 @@ class LibraryTest {
     }
 
     @Test
+    fun popHistoryReturnsAndRemovesTheNewestEntryOfThatBookOnly() = runBlocking {
+        val a = library.add(listing)
+        val b = library.add(Listing("src", "/novel/b", "Book B", null))
+        for (n in 1..3) library.recordJump(Position(a, 1, n))
+        library.recordJump(Position(b, 9, 9))
+
+        assertEquals(Position(a, 1, 3), library.popHistory(a))
+        assertEquals(listOf(2, 1), library.history(a).map { it.sentence })
+        assertEquals(Position(a, 1, 2), library.popHistory(a))
+        assertEquals(Position(a, 1, 1), library.popHistory(a))
+        assertNull(library.popHistory(a))
+        assertEquals(emptyList<Position>(), library.history(a))
+        assertEquals(listOf(Position(b, 9, 9)), library.history(b))
+
+        // After a pop the ranks are still 0, 1, ...: a new jump goes in front and the cap still holds.
+        for (n in 1..25) library.recordJump(Position(a, 1, n))
+        library.popHistory(a)
+        library.recordJump(Position(a, 1, 99))
+        assertEquals(99, library.history(a).first().sentence)
+        assertEquals(20, library.history(a).size)
+        assertEquals(20, count("SELECT COUNT(*) FROM position_history WHERE bookId = ?", a))
+        assertEquals(0, count("SELECT MIN(rank) FROM position_history WHERE bookId = ?", a))
+        assertEquals(19, count("SELECT MAX(rank) FROM position_history WHERE bookId = ?", a))
+    }
+
+    @Test
     fun deleteRemovesEverythingOfThatBookAndNothingElse() = runBlocking {
         val a = library.add(listing)
         val b = library.add(Listing("src", "/novel/b", "Book B", null))

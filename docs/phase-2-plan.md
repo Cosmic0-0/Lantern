@@ -1,6 +1,6 @@
 # Phase 2 plan: the MVP
 
-Status: approved 2026-11-09. Steps 1 to 7 done 2026-11-09, apart from the checks only you can do (listed under step 7).
+Status: approved 2026-11-09. Steps 1 to 8 done 2026-11-09, apart from the checks only you can do (listed under steps 7 and 8). Step 9, acceptance on your A26, is next.
 
 Scope and the "done means" checklist are in [PLAN.md](../PLAN.md#mvp-scope). The module shape is in [Phase 2 architecture](phase-2-architecture.md), terms in [CONTEXT.md](../CONTEXT.md), and the decisions made for this phase are:
 
@@ -135,6 +135,19 @@ Compose, system light and dark only:
 
 - **Tests:** Compose UI tests for the reader only: tapping a sentence sends `playFrom` with the right index, and a manual scroll shows "Back to voice". The other screens are checked by use.
 - **Phone check:** you search, add, read and listen for a day of normal use.
+- **Result, 2026-11-09:** 26 instrumented tests pass on the A26: 19 library, 5 reader and 2 model install. A walk-through on the phone worked:
+  - search grouped Ode of the Brave from AllNovelFull and NovelBuddy into one block;
+  - adding gave 104 chapters;
+  - tap to play, following, "Back to voice" and undo across chapters all worked;
+  - scrolling while paused saved the first visible sentence;
+  - Continue, pull-to-refresh, paste, delete and settings worked.
+
+  Changes from the plan:
+  - The reader shows one sentence per row, since paragraph breaks aren't stored.
+  - Controls are text buttons, because the small icon set has no pause or skip icons.
+  - Play after you scroll away while paused starts from where you're reading, recorded as a jump so Undo returns to the voice.
+
+  **Still needs you:** a day of normal use.
 
 ### 9. MVP acceptance
 

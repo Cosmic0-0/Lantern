@@ -1,40 +1,44 @@
 package app.lantern
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.lifecycleScope
-import app.lantern.data.LanternDatabase
-import kotlinx.coroutines.launch
+import app.lantern.ui.LanternRoot
+import app.lantern.ui.LocalPlayer
+import app.lantern.ui.PlayerConnection
 
 class MainActivity : ComponentActivity() {
+    private val player = PlayerConnection()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        lifecycleScope.launch {
-            val books = LanternDatabase.get(this@MainActivity).dao().bookCount()
-            Log.i(TAG, "database ready books=$books path=${getDatabasePath("lantern.db")}")
-        }
+        enableEdgeToEdge()
         setContent {
             MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
                 Surface(Modifier.fillMaxSize()) {
-                    Box(contentAlignment = Alignment.Center) { Text("Lantern") }
+                    CompositionLocalProvider(LocalPlayer provides player) { LanternRoot() }
                 }
             }
         }
     }
 
-    private companion object {
-        const val TAG = "Lantern"
+    // The controller lives while the screen is visible. The service keeps playing without it.
+    override fun onStart() {
+        super.onStart()
+        player.connect(this)
+    }
+
+    override fun onStop() {
+        player.release()
+        super.onStop()
     }
 }
