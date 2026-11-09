@@ -31,6 +31,25 @@ Timings from 2026-11-08 are in [TTS engine](../decisions/voice-engine.md#your-ch
 
 The local `.bench/` folder holds these tools and is gitignored.
 
+## Spike 1: Phonon inside an app
+
+Measured on 2026-11-09 with the test app in `spikes/engine/`, which loads `libptts_ffi.so` through Phonon's Kotlin wrapper and speaks one sentence per call, as Lantern will. The phone was plugged in with the app on screen. Each row is one run.
+
+| Run | Audio | Generating | RTF | Slowest sentence | Peak RAM |
+|---|---|---|---|---|---|
+| Ode of the Brave ch. 1, Everly, 2 threads, 317 sentences | 20.5 min | 6.9 min | 0.33 | 0.40 | 548 MB |
+| Shadow Slave ch. 1, Trevor, 2 threads, 178 sentences | 11.3 min | 3.8 min | 0.34 | 0.40 | 524 MB |
+| Numbers and symbols test, Everly, 2 threads, 25 lines | 62 s | 18 s | 0.29 | 0.34 | 531 MB |
+
+- **Phonon works inside an app.** The model loads in 0.2 to 0.4 s and the first sentence's audio starts in about 0.13 s.
+- **Speed holds over a whole chapter.** RTF stayed at 0.33 to 0.35 across every block of 40 sentences, and no sentence took longer to make than to play. At 2 threads that is faster than the 0.43 the command line gave on 2026-11-08, likely because short sentences cost less than one long passage [unverified]. 3 and 4 threads weren't timed in the app, because 2 is already about 3 times faster than playback.
+- **Heat:** the battery read 39.9 °C at the start of the long run and 40.0 °C at the end, while charging.
+- **RAM** peaked at about 550 MB for the whole app. That's a lot for a 65 MB model, but it fits on a 6 GB phone.
+- **A background app gets almost no CPU.** In an earlier attempt the phone was used for other apps partway through. From then on, generating slowed sharply and stalled within 3 minutes. So Lantern must generate inside its foreground playback service, and [Spike 2](../../PLAN.md#roadmap) checks that this keeps the speed with the screen off.
+- **Numbers:** you listened to the numbers test and found it alright.
+
+To repeat: build `libptts_ffi.so` (`android/build.sh` in xn-ptts, arm64 only is enough), then in `spikes/engine/` run `./run.sh build`, `install`, `push-model` and `push-texts`, then `./run.sh run <text> <voice> <threads>`. Real chapters go in `spikes/engine/texts/real/`, which is gitignored. Results land in `results.jsonl` on the phone, and each WAV is copied to `Music/LanternVoiceTest`.
+
 ## Kokoro test, done 2026-11-07
 
 RTF about 1.23, with the results under [Measured on your phone](#measured-on-your-phone). The [demo app](https://huggingface.co/csukuangfj/sherpa-onnx-apk/resolve/main/tts-new/1.12.21/sherpa-onnx-1.12.21-arm64-v8a-zh_en-tts-kokoro-multi-lang-v1_0.apk) had to go on over USB. The copy downloaded on the phone had the right size but the wrong contents, and the phone's log showed failure `-103`, "SHA-256 digest of contents did not verify". Lantern must verify a checksum after downloading any voice model.

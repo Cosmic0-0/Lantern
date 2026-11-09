@@ -18,12 +18,15 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 4. ~~Answer the rest of the [open questions](#open-questions).~~ Done 2026-11-09: the default site list stands, English only, and a fresh build rather than an LNReader fork.
 5. The baseline test in Phase 0 of the [roadmap](#roadmap) wasn't done before approval. You can still try it.
 6. ~~Approve the plan.~~ Approved 2026-11-09.
-7. You install Android Studio, then the three spikes in Phase 1 run.
+7. ~~Install Android Studio.~~ Done 2026-11-09.
+8. Spike 1, engine: timed on 2026-11-09, RTF 0.33 at 2 threads over a whole chapter. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app). Still open: you listen to the two chapter WAVs (`spike1-ode-ch1-...` and `spike1-shadow-ch1-...` in `Music/LanternVoiceTest`) for dropped or garbled words.
+9. Spike 2, playback, then Spike 3, sources.
 
 **Current setup:**
 
 - All commits are on `master`. There is no `main` branch. Ask before every push.
-- The laptop has no Android Studio or JDK. `adb`, Rust, the Android NDK and the Phonon phone build are in the gitignored `.bench/` folder, which Spike 1 can reuse.
+- Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
+- Spike code is in `spikes/`. The Spike 1 app (`app.lantern.spike.engine`) is installed on the phone with the model in its files folder.
 - The phone has USB debugging on and the Kokoro demo app installed. The voice samples are in `Music/LanternVoiceTest`.
 - Test scripts and raw results are in `tools/`.
 
@@ -101,8 +104,8 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 **Phase 1: three spikes, throwaway code.** You install Android Studio first. USB debugging is already on, and the Rust and NDK tools for building Phonon are in `.bench/`.
 
-- **Spike 1, engine.** Build Phonon's `libptts_ffi.so` into a test app and generate a full chapter with Everly at 2 to 4 threads. Record RTF and RAM, listen for dropped or garbled words on real chapters, and check how numbers and dates are read. If Phonon can't work inside an app, fall back to Supertonic through sherpa-onnx and count its skipped words.
-- **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
+- **Spike 1, engine.** Build Phonon's `libptts_ffi.so` into a test app and generate a full chapter with Everly at 2 to 4 threads. Record RTF and RAM, listen for dropped or garbled words on real chapters, and check how numbers and dates are read. If Phonon can't work inside an app, fall back to Supertonic through sherpa-onnx and count its skipped words. Timed 2026-11-09: it works, at RTF 0.33. A background app gets almost no CPU, so generation must run in the foreground service.
+- **Spike 2, playback.** Run per-sentence Media3 playback with waiting on unready sentences for an hour with the screen off, including fetching the next chapter with the screen off. Check that generation keeps its Spike 1 speed inside the service while other apps are open. Then run every interruption from the MVP checklist. If this design fails, I revise [Decision 4](docs/decisions/position-tracking.md) before the MVP.
 - **Spike 3, sources.** Run the AllNovelFull plugin in QuickJS on the phone: search, chapter list and chapter text. Then repeat the [site tests](docs/research/site-tests.md) through plugins. If it fails, I fall back to hand-written adapters, or to forking LNReader, and tell you which and why.
 
 **Phase 2: MVP,** as scoped above.
