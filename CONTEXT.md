@@ -32,11 +32,29 @@ _Avoid_: content, body, HTML
 A line in a chapter page that isn't part of the story, such as an ad or a site watermark.
 _Avoid_: noise, spam
 
+**Switch**:
+Moving a book to another source while keeping its position and the chapter text already fetched.
+_Avoid_: migrate, re-source
+
 ### Reading and listening
 
 **Sentence**:
 The smallest piece of chapter text Lantern reads, highlights and speaks. A chapter's text is an ordered list of sentences.
 _Avoid_: line, segment, utterance
+
+**Paragraph**:
+A run of sentences that the source showed as one block of text.
+
+**Skip rule**:
+A piece of text you choose. A paragraph containing it is shown dimmed and not spoken. It applies to one book or to all books.
+_Avoid_: filter, junk rule (junk lines are removed before storing, skip rules are not)
+
+**Pronunciation fix**:
+A word or name and how it should sound, used only for speaking. The text on screen stays as written.
+_Avoid_: replacement, alias, lexicon
+
+**Sleep timer**:
+A setting that pauses listening after a number of minutes or at the end of the chapter.
 
 **Position**:
 Where you are in a book: a chapter and a sentence in it. Reading and listening share one position per book.
