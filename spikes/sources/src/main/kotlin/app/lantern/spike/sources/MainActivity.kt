@@ -66,7 +66,7 @@ class MainActivity : Activity() {
 
     private companion object {
         const val TAG = "LanternSources"
-        const val DEFAULT_PLUGINS = "anf.net,readnovelfull,novelcool,novelbuddy,novelbin"
+        const val DEFAULT_PLUGINS = "anf.net,readnovelfull,novelbuddy,novelbin"
         const val LOG_CHUNK = 3500 // logcat cuts a line near 4000 bytes
         const val SHORT_PARAGRAPH_CHARS = 40
         const val MAX_JUNK_LINES = 10
