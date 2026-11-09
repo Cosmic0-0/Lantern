@@ -20,7 +20,7 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 6. ~~Approve the plan.~~ Approved 2026-11-09.
 7. ~~Install Android Studio.~~ Done 2026-11-09.
 8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
-9. Spike 2, playback: designed 2026-11-09, see [Spike 2](docs/spikes/spike-2-playback.md). Its app in `spikes/playback/` was being written when work paused, and is unreviewed and uncommitted.
+9. ~~Spike 2, playback.~~ Done 2026-11-09: playback ran for about 45 minutes, mostly with the screen off, and resumed within one sentence after a kill, a force stop and a reboot. The phone call is still untested. See [Spike 2](docs/spikes/spike-2-playback.md).
 10. Spike 3, sources.
 
 **Current setup:**
@@ -131,7 +131,7 @@ Only your phone can answer these:
 
 - Whether plugins run correctly in QuickJS on the phone
 - Whether the on-by-default sites answer the phone the way they answered this PC
-- Whether sentence-by-sentence WAV playback has audible gaps
-- Whether Samsung leaves the playback service alone
-- Whether next-chapter fetching works with the screen off
+- ~~Whether sentence-by-sentence WAV playback has audible gaps~~ No gaps you could hear, 2026-11-09
+- ~~Whether Samsung leaves the playback service alone~~ It did, for about 45 minutes unplugged, 2026-11-09
+- ~~Whether next-chapter fetching works with the screen off~~ It does, 2026-11-09
 - Whether Chrome speech survives screen-off, which only matters if you want to rule it out completely

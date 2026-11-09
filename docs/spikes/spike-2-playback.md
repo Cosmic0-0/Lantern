@@ -1,6 +1,6 @@
 # Spike 2: playback
 
-Status, 2026-11-09: designed, and the test app in `spikes/playback/` was being written when work paused. That code is unreviewed and uncommitted. Check that it builds with `./run.sh build` and matches this design before using it.
+Status, 2026-11-09: tested on your A26. Everything passed except the phone call, which wasn't tried. The raw log is `spikes/playback/results/events-2026-11-09.log`.
 
 ## What it proves
 
@@ -23,3 +23,26 @@ Status, 2026-11-09: designed, and the test app in `spikes/playback/` was being w
 2. Unplugged, about an hour with the screen off from chapter 1: no ENDED state, no long waits, generation speed close to Spike 1's RTF 0.33, next chapters fetched with the screen off, and you listen for clicks or gaps between sentences.
 3. Interruptions, each followed by resuming within one sentence: pause, app switch, a phone call (someone needs to call you), turning off Bluetooth headphones, `adb` kill, force stop and reboot.
 4. Generation keeps its speed in the service while you use other apps that don't play audio.
+
+## Results, 2026-11-09
+
+| Test | Result |
+|---|---|
+| About 45 minutes unplugged, mostly with the screen off, through chapters 1 and 2 and into 3 | Passed. 661 sentence changes, no end of playback and no stall. You heard no gaps or clicks between sentences. |
+| Waiting on unready sentences | Waits happened only when playback started or right after you skipped sentences, about 0.1 s each. Generation stayed at least 92 sentences ahead. |
+| Generation with the screen off, in the foreground service | RTF 0.27, against 0.32 with the screen on |
+| Next chapter fetched with the screen off | Passed. Chapter 3 arrived in 1.1 s with the screen off and joined the playlist. |
+| App switch, about 3 minutes in apps that play no sound | Passed. Playback carried on, and generation ran at RTF 0.31 to 0.37 in the service. |
+| Pause | Passed, many times |
+| Headphones disconnecting | Paused at once, three times, and resumed where it was |
+| `adb` kill mid-sentence | Passed. Killed during sentence 51, resumed at 51. Android restarted the service without playing, which is right. |
+| Force stop mid-sentence | Passed. Stopped during sentence 56, resumed at 56. |
+| Reboot | Passed. Stopped during sentence 61, then played from the media player or headphones without opening the app, at sentence 61. |
+| Phone call | Not tested. Nobody was available to call. Media3 handles audio focus, so it should pause and resume, but that's [unverified]. |
+
+What this means for the MVP:
+
+- [Decision 4](../decisions/position-tracking.md) holds. One playlist item per sentence, waiting in BUFFERING instead of ending, and saving on every sentence change gave resume within one sentence after every interruption tried.
+- Samsung left the playback service alone for the whole session, with the phone unplugged and the screen off.
+- Generation must stay inside the foreground service. There it keeps full speed, even with the screen off or other apps in use.
+- The generator made a whole chapter, plus the next one, within minutes of a chapter starting. That's within the one-chapter-ahead limit, but it runs the CPU in bursts. It ran at 2 threads, which counts as gentle under the constraints in the plan.
