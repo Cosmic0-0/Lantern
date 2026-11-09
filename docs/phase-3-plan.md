@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: approved 2026-11-09. Steps 1, 2, 4 and 7 done, step 8 core done, step 9 a no-go (all 2026-11-09). Steps 3, 5 and the rest of 8 are next.
+Status: approved 2026-11-09. Steps 1, 2, 4, 5 and 7 done, steps 3 and 8 built with their phone checks still to run, step 9 a no-go, step 6 in progress (all 2026-11-09).
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -85,6 +85,12 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - tap to jump on a mid-paragraph sentence plays from it;
   - following keeps a long paragraph's spoken sentence visible;
   - scrolling while paused, then play, starts at the first visible sentence, checked in the event log.
+- **Result so far, 2026-11-09:**
+  - One row per paragraph. A tap maps to a sentence through the row's text layout, and following scrolls within a long paragraph.
+  - The reader also has the Sleep button.
+  - 9 reader tests passed on the A26, 4 of them new. One new test first failed because its tap landed in the row's side padding; I moved the tap and it passed.
+  - Chapter 6, fetched by the new build, is stored as 283 sentences in 167 paragraphs.
+  - **Still to do on the phone:** with the merged build, the reader tests can't open their window while the lock screen is up. The four checks above need the phone unlocked.
 
 ### 4. Rules (`core`, Sonnet)
 
@@ -114,6 +120,14 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - a fix for a name in the next 20 sentences: the log shows audio remade under the new key from the playing sentence, and a name-free next chapter keeps its old folder;
   - removing both restores the playlist;
   - resume onto a skipped sentence starts at the next one.
+- **Result, 2026-11-09:** passed on the A26 from `adb`, on chapter 5 of Ode of the Brave. Chapter 5 was fetched before step 2, so a skip rule there removes single sentences.
+  - **Skip rule:** a rule for "Doctor Reno" added while sentence 20 played. Sentences 23, 28, 35 and 40, which name him, never played, and the position never landed on them.
+  - **Fix:** a fix for "Rickart" rebuilt the playlist from the playing sentence (48), and the generator remade audio from there. The chapter's audio folder became `4fada4…` instead of its text hash `80c033…`.
+  - **Preview:** spoke the word, then went back to sentence 63, paused.
+  - **Removing the rules:** the playlist was rebuilt, and audio went back under the plain text hash.
+  - **Not shown on the phone:** a name-free next chapter keeping its folder (the generator hadn't reached chapter 6 yet), and resume onto a skipped sentence. Both are covered by tests: the `core` audio-key tests, and `startAt` moving past skipped sentences.
+  - **After the checks:** the test rules were deleted, and your position was put back at chapter 3, sentence 18.
+  - **Also added:** a failed next-chapter fetch now says "You can switch source from the book screen."
 
 ### 6. Rule screens (`app`, Sonnet)
 
@@ -166,7 +180,12 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - `ChapterMatch` has 35 tests. They include the real chapter lists of Ode of the Brave, which are saved as titles only.
   - AllNovelFull lists 104 chapters and NovelBuddy 105, all plain "Chapter N". Switching to NovelBuddy matches all 104 and adds 1. Switching back matches 104 and removes NovelBuddy's extra chapter unless it was fetched.
   - NovelBuddy's search for the title also returns 22 unrelated "MTL-" listings, so the switch screen should put the matching title first.
-  - `Library.switchSource` and the screen are next.
+  - **`Library.previewSwitch`, `switchSource` and the Switch source screen are built and merged.**
+    - The switch re-checks the plan inside its transaction, then renumbers chapters through a 1,000,000 offset.
+    - Matched rows keep their ids, so your position, history and fetched text stay.
+    - The screen puts the book's own title first.
+    - 35 library tests pass on the A26, 7 of them new for switching.
+  - **Still to do on the phone:** the switch itself, run from the screen with the phone unlocked.
 
 ### 9. Wuxiaworld (`sources`, go or no-go)
 
