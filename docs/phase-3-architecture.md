@@ -89,7 +89,7 @@ CREATE TABLE rule (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   bookId INTEGER REFERENCES book(id) ON DELETE CASCADE,   -- null: all books
   kind TEXT NOT NULL,                                     -- 'skip' or 'fix'
-  match TEXT NOT NULL,
+  term TEXT NOT NULL,                                     -- not "match", an SQLite keyword
   replacement TEXT,                                       -- fixes only
   createdAt INTEGER NOT NULL
 );

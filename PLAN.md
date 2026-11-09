@@ -29,13 +29,16 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 15. ~~Update the README and uninstall the spike apps.~~ Done 2026-11-09. The three spike apps are off the phone, and their code stays in `spikes/` as the record.
 16. ~~Plan Phase 3.~~ Written 2026-11-09: [Phase 3 plan](docs/phase-3-plan.md), with the [architecture sketch](docs/phase-3-architecture.md), five new terms in [CONTEXT.md](CONTEXT.md) and four decisions: [Paragraphs](docs/decisions/paragraphs.md), [Skip rules and pronunciation fixes](docs/decisions/speech-rules.md), [Switching source](docs/decisions/switching-source.md) and [Smaller choices](docs/decisions/phase-3-assumptions.md). It folds in the three open items: paragraph breaks go first (steps 1 to 3), the phone call gets an `adb` stand-in in step 7 and a real call in acceptance, and Wuxiaworld is step 9 with a go or no-go.
 17. ~~Approve the Phase 3 plan.~~ Approved 2026-11-09, merged and pushed to `master`.
-18. **Next: Phase 3 step 1**, schema 2 and the migration. The A26 must be plugged in first, to back up `lantern.db`.
+18. ~~Phase 3 step 1, schema 2 and the migration.~~ Done 2026-11-09: your phone's database migrated with every row and your position intact, and backups are in `.bench/`. See the [Phase 3 plan](docs/phase-3-plan.md#1-schema-2-and-the-migration-app).
+19. **Next: Phase 3 step 2**, paragraphs in text preparation and storage.
 
 **Current setup:**
 
 - All work is on `master`, merged and pushed 2026-11-09. There is no `main` branch. Ask before every push.
 - Build and phone driver: `tools/lantern.sh`. A fresh checkout needs `npm ci && npm run build` in `sources/js`, and `local.properties` with `sdk.dir`, `lantern.benchDir`, `lantern.modelDir` and `lantern.voicesDir` (see `app/build.gradle.kts`).
 - Debug builds include two screens, for checks from `adb`: `DebugActivity` (generate a chapter and time it) and `DebugPlayerActivity` (send commands to the player).
+- Instrumented tests run with `adb install -r` of both APKs, then `adb shell am instrument -w -e class <test classes> app.lantern.test/androidx.test.runner.AndroidJUnitRunner`. Don't use `connectedDebugAndroidTest`, which can uninstall the app afterwards and wipe your library. `ModelInstallerTest` touches the installed model, so run it only on purpose.
+- `dl.google.com` timed out from the laptop on 2026-11-09, so new Android libraries can't be downloaded. Build with `--offline` from the Gradle cache.
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
 - Spike code is in `spikes/`. The spike apps were uninstalled from the phone on 2026-11-09. Only `app.lantern` is installed.
 - Gradle 9.6.0 is cached in `~/.gradle`, because downloads from `services.gradle.org` time out.

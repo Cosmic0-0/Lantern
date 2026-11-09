@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: approved 2026-11-09. Nothing is built yet; step 1 is next.
+Status: approved 2026-11-09. Step 1 done 2026-11-09; step 2 is next.
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -41,12 +41,19 @@ As in Phase 2:
 
 `SentenceEntity` gets `paragraph`, a new `RuleEntity`, database version 2, and a manual `Migration(1, 2)` as in the [architecture](phase-3-architecture.md#app). `fallbackToDestructiveMigration` is never used. Schema 2's JSON is exported and committed beside schema 1. `TextPrep` and `Library` keep compiling by writing `paragraph = idx` until step 2.
 
-- **Tests:** an instrumented `MigrationTestHelper` test on the phone covering:
+- **Tests:** an instrumented migration test on the phone covering:
   - a version 1 database built from schema 1, with a book, chapters, sentences, a position and history, migrates with every row intact;
   - each old sentence's paragraph equals its index;
   - the `rule` table accepts a rule for one book and one for all books, and deleting the book removes its rules.
 - **Phone check:** the same migration run on the copy of your real database pulled from the phone, with book, chapter, sentence, position and history counts compared before and after. Then the update is installed over the old app, and Continue lands where it did.
 - **If it fails:** I restore the backup with `run-as` and tell you before trying again.
+- **Result, 2026-11-09:** passed, and your phone's database is now on schema 2.
+  - **Backups:** two copies of `lantern.db` are in `.bench/`: `db-backup-2026-11-09` from 22:06, and `db-backup-2026-11-09b`, taken just before the migration because you'd played more in between.
+  - **`room-testing` couldn't be downloaded:** `dl.google.com` timed out from this laptop, for Gradle and for `curl`. `MigrationTest` instead builds a version 1 database from the committed `schemas/1.json`, which has the same identity hash as your real database, and opens it through Room. Room runs the migration and checks every table against schema 2, the same check `MigrationTestHelper` makes.
+  - **Tests:** 3 instrumented tests pass. The third ran the migration on a copy of your real database: 1 book, 104 chapters, 1,212 sentences, 1 position and 5 history entries before and after, integrity and foreign keys ok. With the rule index left out of the migration on purpose, all 3 failed with "Migration didn't properly handle: rule", so the check catches a mismatch. The 19 library and 5 reader tests still pass.
+  - **Your phone:** opening the new build migrated it. The database reports schema 2, with the same counts, and your position is unchanged at chapter 3, sentence 18. Continue started at sentence 17, one back after 13 minutes away, as the resume rule says.
+  - **How tests run now:** instrumented tests run through `adb install -r` and `am instrument -e class ...`, not `connectedDebugAndroidTest`, because the Gradle task can uninstall the app afterwards and wipe your library.
+  - **Changes from the plan:** the rule column is `term`, since `MATCH` is an SQLite keyword.
 
 ### 2. Paragraphs in text preparation and storage (`core`, `app`, Sonnet)
 

@@ -74,7 +74,7 @@ class Library(
         return db.withTransaction {
             val bookId = dao.insertBook(BookEntity(sourceId = null, path = null, title = title, coverUrl = null, addedAt = clock()))
             val chapterId = dao.insertChapter(ChapterEntity(bookId = bookId, number = 0, path = null, title = title, textHash = textHash(sentences)))
-            dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s) })
+            dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s, paragraph = i) })
             bookId
         }
     }
@@ -124,7 +124,7 @@ class Library(
                 // Fetched by someone else meanwhile: keep what is stored so sentence numbers stay put.
                 dao.sentences(chapterId)
             } else {
-                dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s) })
+                dao.insertSentences(sentences.mapIndexed { i, s -> SentenceEntity(chapterId, i, s, paragraph = i) })
                 dao.setTextHash(chapterId, textHash(sentences))
                 sentences
             }

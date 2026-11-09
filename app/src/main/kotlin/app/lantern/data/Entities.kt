@@ -1,5 +1,6 @@
 package app.lantern.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -39,7 +40,13 @@ internal data class ChapterEntity(
     primaryKeys = ["chapterId", "idx"],
     foreignKeys = [ForeignKey(ChapterEntity::class, parentColumns = ["id"], childColumns = ["chapterId"], onDelete = ForeignKey.CASCADE)],
 )
-internal data class SentenceEntity(val chapterId: Long, val idx: Int, val text: String)
+internal data class SentenceEntity(
+    val chapterId: Long,
+    val idx: Int,
+    val text: String,
+    /** 0-based within the chapter (docs/decisions/paragraphs.md). Chapters stored before schema 2 have paragraph = idx. */
+    @ColumnInfo(defaultValue = "0") val paragraph: Int,
+)
 
 /** The one saved position of a book. [chapterId] has no foreign key: the position outlives nothing but its book. */
 @Entity(
@@ -66,3 +73,27 @@ internal data class HistoryEntity(
     val sentence: Int,
     val rank: Int,
 )
+
+/**
+ * A skip rule or pronunciation fix (docs/decisions/speech-rules.md). [bookId] null means all books. [kind] is
+ * [KIND_SKIP] or [KIND_FIX]. [replacement] is how a fix's [term] should sound, and null for a skip rule.
+ * The column is `term`, not `match`, because MATCH is an SQLite keyword.
+ */
+@Entity(
+    tableName = "rule",
+    foreignKeys = [ForeignKey(BookEntity::class, parentColumns = ["id"], childColumns = ["bookId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("bookId")],
+)
+internal data class RuleEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val bookId: Long?,
+    val kind: String,
+    val term: String,
+    val replacement: String?,
+    val createdAt: Long,
+) {
+    companion object {
+        const val KIND_SKIP = "skip"
+        const val KIND_FIX = "fix"
+    }
+}

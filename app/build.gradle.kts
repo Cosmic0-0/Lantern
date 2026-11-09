@@ -146,6 +146,9 @@ android {
 
     jniLibsDir?.let { sourceSets["main"].jniLibs.directories.add(it.path) }
 
+    // MigrationTest builds old databases from the exported schemas, read from the test APK's assets.
+    sourceSets["androidTest"].assets.directories.add("$projectDir/schemas")
+
     // The model, voices and manifest stay stored, not deflated, in the APK: the model barely compresses, and
     // the first-launch copy then reads the bytes as they were built.
     androidResources { noCompress += listOf("gguf", "safetensors", "json", "txt") }
