@@ -1,7 +1,12 @@
 package app.lantern
 
 import android.content.ComponentName
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -18,6 +23,10 @@ import com.google.common.util.concurrent.MoreExecutors
  *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd voice --es voice trevor
  *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd speed --ef speed 1.25
  *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd pause|play
+ *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd sleep --ei minutes 1
+ *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd sleep_end_of_chapter|sleep_cancel
+ *   adb shell am start -n app.lantern/.DebugPlayerActivity --es cmd take-focus
+ * take-focus holds transient audio focus for 20 s, as the dialer does for a call, then lets it go.
  */
 class DebugPlayerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,10 +48,38 @@ class DebugPlayerActivity : ComponentActivity() {
                 "speed" -> controller.setPlaybackSpeed(intent.getFloatExtra("speed", 1f))
                 "pause" -> controller.pause()
                 "play" -> controller.play()
+                "sleep" -> Commands.sleep(controller, Commands.Sleep.Minutes(intent.getIntExtra("minutes", 1)))
+                "sleep_end_of_chapter" -> Commands.sleep(controller, Commands.Sleep.EndOfChapter)
+                "sleep_cancel" -> Commands.sleep(controller, null)
+                "take-focus" -> takeFocus()
                 else -> EventLog.log("DEBUG", "unknown command $cmd")
             }
             // Give the command time to arrive before the controller goes away with this screen.
             window.decorView.postDelayed({ controller.release(); finish() }, 1000)
         }, MoreExecutors.directExecutor())
+    }
+
+    /** A stand-in for a phone call: transient focus with call audio attributes, held on the app's main thread. */
+    private fun takeFocus() {
+        val audio = applicationContext.getSystemService(AudioManager::class.java)
+        val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build(),
+            )
+            .setOnAudioFocusChangeListener { EventLog.log("DEBUG", "take-focus change $it") }
+            .build()
+        val result = audio.requestAudioFocus(request)
+        EventLog.log("DEBUG", "take-focus requested result=$result, holding ${FOCUS_HOLD_MS / 1000} s")
+        Handler(Looper.getMainLooper()).postDelayed({
+            audio.abandonAudioFocusRequest(request)
+            EventLog.log("DEBUG", "take-focus abandoned")
+        }, FOCUS_HOLD_MS)
+    }
+
+    private companion object {
+        const val FOCUS_HOLD_MS = 20_000L
     }
 }
