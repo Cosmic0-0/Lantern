@@ -4,14 +4,12 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.room.Room
 import androidx.sqlite.db.SupportSQLiteDatabase
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Test
-import org.junit.runner.RunWith
 import java.io.File
 
 /**
@@ -22,7 +20,6 @@ import java.io.File
  * [realDatabaseMigrates] runs only when a copy of the phone's own lantern.db has been placed in
  * files/migration-check/ (see step 1 in the plan). Otherwise it is skipped.
  */
-@RunWith(AndroidJUnit4::class)
 class MigrationTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-// Your library is real data now: every schema change needs a written migration, tested in MigrationTest, and
+// The library holds real data: every schema change needs a written migration, tested in MigrationTest, and
 // never a destructive fallback. Room turns foreign keys on for declared ForeignKeys, which the cascades in
 // Entities.kt depend on.
 @Database(
