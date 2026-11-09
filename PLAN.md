@@ -21,7 +21,8 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 7. ~~Install Android Studio.~~ Done 2026-11-09.
 8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
 9. ~~Spike 2, playback.~~ Done 2026-11-09: playback ran for about 45 minutes, mostly with the screen off, and resumed within one sentence after a kill, a force stop and a reboot. The phone call is still untested. See [Spike 2](docs/spikes/spike-2-playback.md).
-10. Spike 3, sources: designed 2026-11-09, see [Spike 3](docs/spikes/spike-3-sources.md). Its app in `spikes/sources/` is being written.
+10. ~~Spike 3, sources.~~ Done 2026-11-09: plugins run in QuickJS on the phone. AllNovelFull, ReadNovelFull and NovelBuddy work fully, NovelCool is dropped and Novel Bin is broken. See [Spike 3](docs/spikes/spike-3-sources.md).
+11. Phase 1 is done apart from the phone-call test and Wuxiaworld. Next: plan the Phase 2 MVP build.
 
 **Current setup:**
 
@@ -121,7 +122,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 Decisions for you:
 
-1. ~~Is the [default site list](docs/research/site-tests.md) OK?~~ Answered 2026-11-09: yes. Sites that object stay off by default, and you can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
+1. ~~Is the [default site list](docs/research/site-tests.md) OK?~~ Answered 2026-11-09: yes, then trimmed after Spike 3 to AllNovelFull, ReadNovelFull and NovelBuddy, with Wuxiaworld still to test. Sites that object stay off by default, and you can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
 2. ~~Fresh build or LNReader fork?~~ Answered 2026-11-09: fresh build. See [App type](docs/decisions/app-type.md#your-choice).
 3. ~~English only?~~ Answered 2026-11-09: yes, English only.
 4. ~~Which voice setup?~~ Answered 2026-11-08: Phonon 31M, voices Everly and Trevor.
@@ -129,8 +130,8 @@ Decisions for you:
 
 Only your phone can answer these:
 
-- Whether plugins run correctly in QuickJS on the phone
-- Whether the on-by-default sites answer the phone the way they answered this PC
+- ~~Whether plugins run correctly in QuickJS on the phone~~ They do, 2026-11-09
+- ~~Whether the on-by-default sites answer the phone the way they answered this PC~~ Three do, NovelCool returned manga, and Novel Bin's plugin is broken on the PC too, 2026-11-09
 - ~~Whether sentence-by-sentence WAV playback has audible gaps~~ No gaps you could hear, 2026-11-09
 - ~~Whether Samsung leaves the playback service alone~~ It did, for about 45 minutes unplugged, 2026-11-09
 - ~~Whether next-chapter fetching works with the screen off~~ It does, 2026-11-09

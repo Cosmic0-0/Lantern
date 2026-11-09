@@ -32,9 +32,9 @@ I checked your example. "Ode of the Brave" is on AllNovelFull, with chapter link
 - Plugin code ships inside the app after I read it. Nothing is downloaded and run later
 - A challenge page stops the request and tells you. Lantern never solves or evades one
 
-**Starting site list.** The six sites on by default are AllNovelFull, ReadNovelFull, NovelCool, NovelBuddy, Novel Bin and Wuxiaworld, and the full list with how the sites were tested is in [Site tests](../research/site-tests.md).
+**Starting site list.** Updated 2026-11-09 after [Spike 3](../spikes/spike-3-sources.md): AllNovelFull, ReadNovelFull and NovelBuddy are on by default, and Wuxiaworld joins them once its plugin is tested. You dropped NovelCool for good, because its plugin poses as NovelCool's own app with the app's secret key. Novel Bin is off until its broken plugin is fixed and I review it again. How the sites were first tested is in [Site tests](../research/site-tests.md).
 
-**Plugins I would not enable.** The Royal Road plugin contains code that solves Anubis anti-bot challenges, and StorySeedling's refers to bypassing Turnstile. That conflicts with the rule above, and I read every plugin before it ships.
+**Plugins I would not enable.** The Royal Road plugin contains code that solves Anubis anti-bot challenges, and StorySeedling's refers to bypassing Turnstile. That conflicts with the rule above, and I read every plugin before it ships. That review checks for impersonating a site's own app, as NovelCool's plugin does, as well as for which sites a plugin reaches.
 
 **Legal and terms-of-service flags.** This is general research, not legal advice, and the law cited is US law.
 

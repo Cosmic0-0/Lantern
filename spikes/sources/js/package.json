@@ -1,0 +1,16 @@
+{
+  "name": "lantern-spike-sources-js",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spike 3 JS runtime: cheerio, htmlparser2, dayjs and URL polyfills bundled for QuickJS",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "cheerio": "1.2.0",
+    "core-js": "3.43.0",
+    "dayjs": "1.11.13",
+    "esbuild": "0.25.12",
+    "htmlparser2": "10.1.0"
+  }
+}
