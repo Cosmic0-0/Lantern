@@ -13,4 +13,4 @@ Rejected: re-fetching old chapters to recover their paragraphs. It costs a reque
 
 ## Your choice
 
-**Open.** I recommend the above.
+**Decided 2026-11-09: as above, approved with the [Phase 3 plan](../phase-3-plan.md).**

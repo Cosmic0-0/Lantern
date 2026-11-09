@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phases 1 and 2 are done: the MVP is built, on your A26 and accepted. The Phase 3 plan is written and waiting for your approval.
+Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phases 1 and 2 are done: the MVP is built, on your A26 and accepted. The Phase 3 plan is approved, and its step 1 is next.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -27,8 +27,9 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 13. ~~Build the MVP, steps 1 to 8.~~ Done 2026-11-09: the app is in `app/`, `core/` and `sources/`, and installed on your A26. Each step's tests and phone results are in the [Phase 2 plan](docs/phase-2-plan.md).
 14. ~~Step 9, acceptance on your A26.~~ Accepted 2026-11-09: you said your checks were enough and the app is good. Which checks you ran isn't recorded, so treat the phone call as still untested until one comes in.
 15. ~~Update the README and uninstall the spike apps.~~ Done 2026-11-09. The three spike apps are off the phone, and their code stays in `spikes/` as the record.
-16. ~~Plan Phase 3.~~ Written 2026-11-09: [Phase 3 plan](docs/phase-3-plan.md), with the [architecture sketch](docs/phase-3-architecture.md), five new terms in [CONTEXT.md](CONTEXT.md) and four proposed decisions: [Paragraphs](docs/decisions/paragraphs.md), [Skip rules and pronunciation fixes](docs/decisions/speech-rules.md), [Switching source](docs/decisions/switching-source.md) and [Smaller choices](docs/decisions/phase-3-assumptions.md). It folds in the three open items: paragraph breaks go first (steps 1 to 3), the phone call gets an `adb` stand-in in step 7 and a real call in acceptance, and Wuxiaworld is step 9 with a go or no-go.
-17. **Next: approve the Phase 3 plan.** Nothing is built until then.
+16. ~~Plan Phase 3.~~ Written 2026-11-09: [Phase 3 plan](docs/phase-3-plan.md), with the [architecture sketch](docs/phase-3-architecture.md), five new terms in [CONTEXT.md](CONTEXT.md) and four decisions: [Paragraphs](docs/decisions/paragraphs.md), [Skip rules and pronunciation fixes](docs/decisions/speech-rules.md), [Switching source](docs/decisions/switching-source.md) and [Smaller choices](docs/decisions/phase-3-assumptions.md). It folds in the three open items: paragraph breaks go first (steps 1 to 3), the phone call gets an `adb` stand-in in step 7 and a real call in acceptance, and Wuxiaworld is step 9 with a go or no-go.
+17. ~~Approve the Phase 3 plan.~~ Approved 2026-11-09, merged and pushed to `master`.
+18. **Next: Phase 3 step 1**, schema 2 and the migration. The A26 must be plugged in first, to back up `lantern.db`.
 
 **Current setup:**
 
@@ -122,7 +123,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 
 **Phase 2: MVP,** as scoped above.
 
-**Phase 3: comfort.** Switching a book to another site when one breaks, a sleep timer, pronunciation fixes for character names and skip rules. Also paragraph breaks in the reader, the phone call test and Wuxiaworld. Planned in the [Phase 3 plan](docs/phase-3-plan.md), waiting for approval.
+**Phase 3: comfort.** Switching a book to another site when one breaks, a sleep timer, pronunciation fixes for character names and skip rules. Also paragraph breaks in the reader, the phone call test and Wuxiaworld. Planned in the [Phase 3 plan](docs/phase-3-plan.md), approved 2026-11-09.
 
 **Phase 4: more sources.** The visible in-app browser for blocked sites like Scribble Hub, share-from-browser with Mozilla's [Readability](https://github.com/mozilla/readability) for anything else, updating plugins from inside the app after review, and EPUB import for DRM-free files.
 

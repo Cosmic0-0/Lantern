@@ -1,6 +1,6 @@
 # Phase 3 architecture sketch
 
-Status: proposed 2026-11-09, waiting for your approval. Terms follow [CONTEXT.md](../CONTEXT.md). The module shape from [Phase 2](phase-2-architecture.md) stays: `core` (pure rules), `sources` (plugins), `app` (Android).
+Status: accepted 2026-11-09, with the [Phase 3 plan](phase-3-plan.md). Terms follow [CONTEXT.md](../CONTEXT.md). The module shape from [Phase 2](phase-2-architecture.md) stays: `core` (pure rules), `sources` (plugins), `app` (Android).
 
 ## Problem
 
@@ -148,7 +148,7 @@ Deliberately not done:
 
 ## Open questions and risks
 
-Settled by your approval of the [Phase 3 plan](phase-3-plan.md). Risks are listed there.
+All settled on 2026-11-09 by your approval of the [Phase 3 plan](phase-3-plan.md). Risks are listed there.
 
 ## Next implementation step
 

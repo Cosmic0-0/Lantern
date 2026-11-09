@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: proposed 2026-11-09, waiting for your approval. Nothing is built yet.
+Status: approved 2026-11-09. Nothing is built yet; step 1 is next.
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -8,7 +8,7 @@ Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another 
 - **The phone call** gets a stand-in check I can run from `adb` in step 7, plus a real call in acceptance.
 - **Wuxiaworld** is its own step at the end (step 9), with a go or no-go, because it's independent of the rest.
 
-The module shape is in [Phase 3 architecture](phase-3-architecture.md), and terms are in [CONTEXT.md](../CONTEXT.md). The decisions proposed for this phase are:
+The module shape is in [Phase 3 architecture](phase-3-architecture.md), and terms are in [CONTEXT.md](../CONTEXT.md). The decisions made for this phase, all as I recommended, are:
 
 [Paragraphs](decisions/paragraphs.md) · [Skip rules and pronunciation fixes](decisions/speech-rules.md) · [Switching source](decisions/switching-source.md) · [Smaller choices](decisions/phase-3-assumptions.md)
 

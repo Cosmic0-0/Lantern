@@ -14,4 +14,4 @@ Proposed during Phase 3 planning on 2026-11-09:
 
 ## Your choice
 
-**Open.** I recommend the above.
+**Decided 2026-11-09: as above, approved with the [Phase 3 plan](../phase-3-plan.md).**
