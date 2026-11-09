@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: approved 2026-11-09. Step 1 done 2026-11-09; step 2 is next.
+Status: approved 2026-11-09. Steps 1, 2, 4 and 7 done, step 8 core done, step 9 a no-go (all 2026-11-09). Steps 3, 5 and the rest of 8 are next.
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -66,6 +66,12 @@ As in Phase 2:
 
   The real chapters in `core/src/test/resources/chapters/` keep the same sentences as before. Instrumented: paste keeps paragraphs, and an old chapter (paragraph = index) reads back unchanged.
 - **Phone check:** none on its own. Step 3 shows it.
+- **Result, 2026-11-09:** passed.
+  - 25 `TextPrep` tests pass, 5 of them new.
+  - On the 6 real chapters, every sentence text is byte for byte the same as before, and the paragraph numbers never skip or go backwards.
+  - `Library.chapterText` returns sentences with paragraphs, and `sentences()` still returns text only.
+  - The text hash still covers the sentence texts only, so existing audio stays valid.
+  - 23 library tests pass on the A26, 4 of them new: paste keeps paragraphs, a fetched chapter stores them, a failed fetch stores nothing, and an old chapter reads back unchanged.
 
 ### 3. Reader paragraphs (`app`)
 
@@ -89,6 +95,10 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - **Fixes:** whole words only (`Yan` doesn't touch `Yanking`); ignoring case; the possessive `Xiao Yan's`; longest match first; two fixes in one sentence; a fix whose replacement contains another fix's word is applied once, not again.
   - **Audio key:** the plain text hash when no fix occurs in the chapter; changes when a fix that occurs is added, edited or removed; the same no matter what order the fixes are in.
 - **Phone check:** none, since this is pure logic.
+- **Result, 2026-11-09:** 42 tests pass. Breaking the code on purpose made at least one test fail each time. Choices made while building:
+  - A fix's words are trimmed before matching.
+  - A fix counts toward the audio key only if it's actually applied, so a fix for `Xiao` hidden behind `Xiao Yan` changes nothing.
+  - A fix that appears only in a skipped paragraph still changes the key, which costs a remake of that chapter's audio and nothing else.
 
 ### 5. Rules in playback (`app`)
 
@@ -152,6 +162,11 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
   - **`ChapterMatch`:** numbers in "Chapter 57", "Ch. 57: Title", "57 - Title" and "Episode 57"; a prologue matched by title; a duplicate number matched in order; a source missing chapters; a source with extra side stories; the real chapter lists of Ode of the Brave on AllNovelFull and NovelBuddy, saved as test resources (titles only).
   - **Instrumented `Library`:** a switch keeps the position's chapter row and sentence; fetched text stays; an unfetched old-only chapter goes; a position on it moves to the next chapter; the history is cleaned; refresh after a switch adds only new chapters; switching to a listing that's already a book is refused.
 - **Phone check:** Ode of the Brave, read partway on AllNovelFull, switched to NovelBuddy. The preview's counts match the lists, Continue lands on the same sentence, and the next chapter's fetch goes to NovelBuddy in the HTTP log.
+- **Result so far, 2026-11-09: the `core` part is done.**
+  - `ChapterMatch` has 35 tests. They include the real chapter lists of Ode of the Brave, which are saved as titles only.
+  - AllNovelFull lists 104 chapters and NovelBuddy 105, all plain "Chapter N". Switching to NovelBuddy matches all 104 and adds 1. Switching back matches 104 and removes NovelBuddy's extra chapter unless it was fetched.
+  - NovelBuddy's search for the title also returns 22 unrelated "MTL-" listings, so the switch screen should put the matching title first.
+  - `Library.switchSource` and the screen are next.
 
 ### 9. Wuxiaworld (`sources`, go or no-go)
 
