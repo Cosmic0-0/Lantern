@@ -11,6 +11,8 @@ object Commands {
     const val CONTINUE = "lantern.continue"
     const val SET_VOICE = "lantern.set_voice"
     const val SLEEP = "lantern.sleep"
+    const val RULES_CHANGED = "lantern.rules_changed"
+    const val PREVIEW = "lantern.preview"
 
     /** Session extra: when the sleep timer stops playback, in epoch milliseconds. Absent when no timed sleep is set. */
     const val EXTRA_SLEEP_AT = "sleep_at"
@@ -23,6 +25,7 @@ object Commands {
     internal const val ARG_SENTENCE = "sentence"
     internal const val ARG_JUMP = "jump"
     internal const val ARG_VOICE = "voice"
+    internal const val ARG_TEXT = "text"
     internal const val ARG_SLEEP_MINUTES = "sleep_minutes" // > 0 minutes, SLEEP_END_OF_CHAPTER, or 0 to cancel
     internal const val SLEEP_END_OF_CHAPTER = -1
 
@@ -60,6 +63,16 @@ object Commands {
     fun continueBook(controller: MediaController, bookId: Long?) {
         val args = Bundle().apply { if (bookId != null) putLong(ARG_BOOK, bookId) }
         controller.sendCustomCommand(SessionCommand(CONTINUE, Bundle.EMPTY), args)
+    }
+
+    /** After adding, editing or deleting a rule: the service works out again what is skipped and said. */
+    fun rulesChanged(controller: MediaController) {
+        controller.sendCustomCommand(SessionCommand(RULES_CHANGED, Bundle.EMPTY), Bundle.EMPTY)
+    }
+
+    /** Says [text] through the playing book's fixes, then stands paused where playback was. */
+    fun preview(controller: MediaController, text: String) {
+        controller.sendCustomCommand(SessionCommand(PREVIEW, Bundle.EMPTY), Bundle().apply { putString(ARG_TEXT, text) })
     }
 
     fun setVoice(controller: MediaController, voice: String) {
