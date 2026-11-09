@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phase 1 has started; Lantern itself isn't built yet.
+Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phase 1 is done, and Phase 2, the MVP, is next. Lantern itself isn't built yet.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -8,7 +8,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 Start here when picking this up in a new chat. Last updated 2026-11-09.
 
-The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and Phase 1 has started. No app code exists yet.
+The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and all three Phase 1 spikes passed the same day. No app code exists yet, only throwaway spike code in `spikes/`.
 
 **Next steps, in order:**
 
@@ -22,13 +22,14 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
 9. ~~Spike 2, playback.~~ Done 2026-11-09: playback ran for about 45 minutes, mostly with the screen off, and resumed within one sentence after a kill, a force stop and a reboot. The phone call is still untested. See [Spike 2](docs/spikes/spike-2-playback.md).
 10. ~~Spike 3, sources.~~ Done 2026-11-09: plugins run in QuickJS on the phone. AllNovelFull, ReadNovelFull and NovelBuddy work fully, NovelCool is dropped and Novel Bin is broken. See [Spike 3](docs/spikes/spike-3-sources.md).
-11. Phase 1 is done apart from the phone-call test and Wuxiaworld. Next: plan the Phase 2 MVP build.
+11. **Next: plan the Phase 2 MVP build.** Start with [Starting Phase 2](docs/phase-2-start.md). It has what Phase 1 proved, the spike code worth reusing, the decisions the MVP plan must make, environment problems and which skills to use. Phase 1 leaves two small things open: the phone call test and Wuxiaworld.
 
 **Current setup:**
 
 - All commits are on `master`. There is no `main` branch. Ask before every push.
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
-- Spike code is in `spikes/`. The Spike 1 app (`app.lantern.spike.engine`) is installed on the phone with the model in its files folder.
+- Spike code is in `spikes/`. The three spike apps (`app.lantern.spike.engine`, `.playback` and `.sources`) are installed on the phone, the first two with the Phonon model in their files folders.
+- Gradle 9.6.0 is cached in `~/.gradle`, because downloads from `services.gradle.org` time out.
 - The phone has USB debugging on and the Kokoro demo app installed. The voice samples are in `Music/LanternVoiceTest`.
 - Test scripts and raw results are in `tools/`.
 

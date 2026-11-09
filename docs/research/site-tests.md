@@ -4,7 +4,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 **Starting site list.** I tested 22 sites on 2026-11-07 from this PC, with a plainly named client, one test title each and at most five requests per site. Your phone or a different day may differ, so [Spike 3](../../PLAN.md#roadmap) repeats this. "Chapter text" means the text was in the page itself. The scripts and raw results are in `tools/site-check/`.
 
-*On by default.* Plain requests work, and neither robots.txt nor the terms I found object.
+*On by default when tested.* Plain requests work, and neither robots.txt nor the terms I found object. After [Spike 3](../spikes/spike-3-sources.md) on 2026-11-09, only AllNovelFull, ReadNovelFull and NovelBuddy stay on, with Wuxiaworld still to test. NovelCool is dropped and Novel Bin is broken, as explained in [Finding and loading chapters](../decisions/chapter-sources.md).
 
 | Site | Type | Search | Chapter text | Terms |
 |---|---|---|---|---|

@@ -6,11 +6,11 @@ It targets a Samsung Galaxy A26. A laptop app that generates chapters with a big
 
 ## Status
 
-The plan was approved on 2026-11-09. Lantern is now in Phase 1 of the [roadmap](PLAN.md#roadmap), where three throwaway spikes test the riskiest parts. The repo has no app code yet, so there is nothing to build or install.
+The plan was approved on 2026-11-09, and the three Phase 1 spikes of the [roadmap](PLAN.md#roadmap) passed on the phone the same day. Phase 2, the MVP build, is next. The repo has only throwaway spike code in `spikes/`, so there is nothing to install yet.
 
 ## Planned stack
 
-These choices are recommendations until the spikes confirm them:
+The Phase 1 spikes confirmed these choices on the phone:
 
 - **App:** native Kotlin, Jetpack Compose, and Media3. See [app type](docs/decisions/app-type.md).
 - **Voices:** on-device speech with Phonon 31M on the phone, through its own runtime. See [voice engine](docs/decisions/voice-engine.md).
@@ -23,5 +23,7 @@ These choices are recommendations until the spikes confirm them:
 - [PLAN.md](PLAN.md): the problem, decisions, MVP scope, roadmap, and open questions. Start here.
 - [Reference review](docs/research/reference-review.md): lumina-reader and the other reader apps reviewed.
 - [Voice tests](docs/research/voice-tests.md): speed measurements from the phone and laptop, and how to rerun them.
-- [Site tests](docs/research/site-tests.md): the sites tested, and which ones start enabled.
-- `tools/`: the scripts and raw results behind the voice and site tests.
+- [Site tests](docs/research/site-tests.md): the sites first tested from the PC.
+- [Spike results](docs/spikes/): the playback and sources spikes on the phone. The engine spike is in Voice tests.
+- [Starting Phase 2](docs/phase-2-start.md): what Phase 1 proved and what the MVP plan must decide.
+- `tools/` and `spikes/`: the scripts, test apps and raw results behind the tests.
