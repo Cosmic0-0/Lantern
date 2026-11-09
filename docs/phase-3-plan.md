@@ -1,6 +1,6 @@
 # Phase 3 plan: comfort
 
-Status: approved 2026-11-09. Steps 1 to 5, 7 and 8 done, step 9 a no-go, step 6 in progress (all 2026-11-09). Acceptance (step 10) follows step 6.
+Status: approved 2026-11-09. Steps 1 to 8 done and step 9 a no-go (all 2026-11-09). Acceptance (step 10) is next.
 
 Phase 3 in the [roadmap](../PLAN.md#roadmap) covers switching a book to another source when one breaks, a sleep timer, and pronunciation fixes and skip rules. Three things still open from earlier are folded in:
 
@@ -144,6 +144,11 @@ One `LazyColumn` row per paragraph. Each row is one `Text` with an annotated spa
 
 - **Tests:** a Compose test that the skip sheet shows the match count for a fixed chapter. The rest is checked by use.
 - **Phone check:** you add a skip rule and a fix from the reader while listening, preview a fix, and delete both from the rules screen.
+- **Result so far, 2026-11-09:** built and merged.
+  - **Tests:** 16 UI tests pass on the A26: 6 for the rule sheet, and 10 for the reader including a long-press. 38 library and migration tests pass too.
+  - **Seen on the phone:** a long-press on a sentence in chapter 6 opened the sheet with the sentence prefilled and "Matches 5 sentences in this chapter", the whole paragraph. The Rules screen shows "No rules yet…".
+  - **A fix before merging:** the sheet now closes as soon as a rule is stored, so a failed dimming refresh can't lead to a duplicate on a second Save.
+  - **Still needs you, in acceptance:** saving a rule, Preview, and editing and deleting from the Rules screen. The adb checks in step 5 cover the playback side of each.
 
 ### 7. Sleep timer and the phone call stand-in (`app`)
 

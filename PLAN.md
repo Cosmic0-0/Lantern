@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phases 1 and 2 are done: the MVP is built, on your A26 and accepted. The Phase 3 plan is approved, and its step 1 is next.
+Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phases 1 and 2 are done: the MVP is built, on your A26 and accepted. Phase 3 is built and waiting for acceptance.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -30,7 +30,8 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 16. ~~Plan Phase 3.~~ Written 2026-11-09: [Phase 3 plan](docs/phase-3-plan.md), with the [architecture sketch](docs/phase-3-architecture.md), five new terms in [CONTEXT.md](CONTEXT.md) and four decisions: [Paragraphs](docs/decisions/paragraphs.md), [Skip rules and pronunciation fixes](docs/decisions/speech-rules.md), [Switching source](docs/decisions/switching-source.md) and [Smaller choices](docs/decisions/phase-3-assumptions.md). It folds in the three open items: paragraph breaks go first (steps 1 to 3), the phone call gets an `adb` stand-in in step 7 and a real call in acceptance, and Wuxiaworld is step 9 with a go or no-go.
 17. ~~Approve the Phase 3 plan.~~ Approved 2026-11-09, merged and pushed to `master`.
 18. ~~Phase 3 step 1, schema 2 and the migration.~~ Done 2026-11-09: your phone's database migrated with every row and your position intact, and backups are in `.bench/`. See the [Phase 3 plan](docs/phase-3-plan.md#1-schema-2-and-the-migration-app).
-19. **Next: Phase 3 step 2**, paragraphs in text preparation and storage.
+19. ~~Phase 3 steps 2 to 9.~~ Done 2026-11-09, mostly in parallel, each merged into `master` after review and phone checks. Step 9 (Wuxiaworld) is a no-go because its terms forbid automated access. Results are in the [Phase 3 plan](docs/phase-3-plan.md).
+20. **Next: Phase 3 acceptance (step 10)**, on your A26. It needs a real phone call during playback, your own use of the rule sheet and Rules screen, and a listen to a pronunciation fix. Then the README and `docs/phase-3-results.md`.
 
 **Current setup:**
 
