@@ -364,10 +364,11 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
         scope.launch {
             try {
                 library.addRule(if (draft.allBooks) null else bookId, draft.kind, draft.term, draft.replacement)
+                // Stored: close the sheet now, so nothing below can leave it open for a second, duplicate Save.
+                ruleFor = null
                 controller?.let { Commands.rulesChanged(it) }
                 // Only what is dimmed changes, so the chapter stays where it is scrolled.
                 state.skipped = library.chapterText(state.chapterId).skipped
-                ruleFor = null
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) { // a blank term or respelling comes back as an IllegalArgumentException with its reason
