@@ -26,15 +26,16 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 12. ~~Approve the Phase 2 plan.~~ Approved 2026-11-09.
 13. ~~Build the MVP, steps 1 to 8.~~ Done 2026-11-09: the app is in `app/`, `core/` and `sources/`, and installed on your A26. Each step's tests and phone results are in the [Phase 2 plan](docs/phase-2-plan.md).
 14. ~~Step 9, acceptance on your A26.~~ Accepted 2026-11-09: you said your checks were enough and the app is good. Which checks you ran isn't recorded, so treat the phone call as still untested until one comes in.
-15. **Next:** update the README, uninstall the spike apps, and plan Phase 3.
+15. ~~Update the README and uninstall the spike apps.~~ Done 2026-11-09. The three spike apps are off the phone, and their code stays in `spikes/` as the record.
+16. **Next: plan Phase 3**, the comfort features in the [roadmap](#roadmap). Still open from earlier: the phone call test, Wuxiaworld, and paragraph breaks in the reader if one sentence per row bothers you.
 
 **Current setup:**
 
-- Phase 2 was merged into `master` on 2026-11-09 and isn't pushed yet. There is no `main` branch. Ask before every push.
+- All work is on `master`, merged and pushed 2026-11-09. There is no `main` branch. Ask before every push.
 - Build and phone driver: `tools/lantern.sh`. A fresh checkout needs `npm ci && npm run build` in `sources/js`, and `local.properties` with `sdk.dir`, `lantern.benchDir`, `lantern.modelDir` and `lantern.voicesDir` (see `app/build.gradle.kts`).
 - Debug builds include two screens, for checks from `adb`: `DebugActivity` (generate a chapter and time it) and `DebugPlayerActivity` (send commands to the player).
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
-- Spike code is in `spikes/`. The three spike apps (`app.lantern.spike.engine`, `.playback` and `.sources`) are installed on the phone, the first two with the Phonon model in their files folders.
+- Spike code is in `spikes/`. The spike apps were uninstalled from the phone on 2026-11-09. Only `app.lantern` is installed.
 - Gradle 9.6.0 is cached in `~/.gradle`, because downloads from `services.gradle.org` time out.
 - The phone has USB debugging on and the Kokoro demo app installed. The voice samples are in `Music/LanternVoiceTest`.
 - Test scripts and raw results are in `tools/`.
@@ -70,7 +71,7 @@ The recommended path needs no account, login or backend. The only option that wo
 
 ## Research
 
-- [Reference review](docs/research/reference-review.md): lumina-reader and the better references I read
+- [Reference review](docs/research/reference-review.md): the existing readers and plugin sets I read
 - [Voice tests](docs/research/voice-tests.md): timings from your phone and laptop for every voice tried, and how to repeat the tests
 - [Site tests](docs/research/site-tests.md): the sites I tested for search and chapter text
 

@@ -161,6 +161,8 @@ The "done means" list from [PLAN.md](../PLAN.md#mvp-scope), run on the A26 and r
 
 Then the spike apps are uninstalled, the README is updated (`update-readme`) and [PLAN.md](../PLAN.md) gets "Where things stand" for Phase 3.
 
+**Result, 2026-11-09:** you accepted the MVP after your own checks, without a separate results file, so `docs/phase-2-results.md` was never written. Which checks you ran isn't recorded, so the phone call stays open until one comes in. The spike apps are uninstalled and the README is updated.
+
 ## Risks
 
 | Risk | Where it shows | Fallback |
