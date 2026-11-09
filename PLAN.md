@@ -22,7 +22,8 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 8. ~~Spike 1, engine.~~ Done 2026-11-09: RTF 0.33 at 2 threads over a whole chapter, and both chapters sounded fine to you. See [Voice tests](docs/research/voice-tests.md#spike-1-phonon-inside-an-app).
 9. ~~Spike 2, playback.~~ Done 2026-11-09: playback ran for about 45 minutes, mostly with the screen off, and resumed within one sentence after a kill, a force stop and a reboot. The phone call is still untested. See [Spike 2](docs/spikes/spike-2-playback.md).
 10. ~~Spike 3, sources.~~ Done 2026-11-09: plugins run in QuickJS on the phone. AllNovelFull, ReadNovelFull and NovelBuddy work fully, NovelCool is dropped and Novel Bin is broken. See [Spike 3](docs/spikes/spike-3-sources.md).
-11. **Next: plan the Phase 2 MVP build.** Start with [Starting Phase 2](docs/phase-2-start.md). It has what Phase 1 proved, the spike code worth reusing, the decisions the MVP plan must make, environment problems and which skills to use. Phase 1 leaves two small things open: the phone call test and Wuxiaworld.
+11. ~~Plan the Phase 2 MVP build.~~ Written 2026-11-09: [Phase 2 plan](docs/phase-2-plan.md), with the [architecture sketch](docs/phase-2-architecture.md), the glossary in [CONTEXT.md](CONTEXT.md) and 13 decisions in `docs/decisions/`, all as I recommended. [Starting Phase 2](docs/phase-2-start.md) has the background. Phase 1 leaves two small things open: the phone call test and Wuxiaworld.
+12. **Next: you approve the [Phase 2 plan](docs/phase-2-plan.md).** Then building starts with step 1, the skeleton and toolchain. No app code exists until then.
 
 **Current setup:**
 
@@ -60,6 +61,7 @@ The recommended path needs no account, login or backend. The only option that wo
 - Decision 3, [finding and loading chapters](docs/decisions/chapter-sources.md): LNReader plugins, run inside Lantern.
 - Decision 4, [position tracking](docs/decisions/position-tracking.md): the text is the source of truth and audio is a disposable cache.
 - Decision 5, [laptop precompute](docs/decisions/laptop-precompute.md): dropped for now. A future laptop app could generate chapters with a bigger model and load them onto the phone over USB.
+- Phase 2 decisions, 2026-11-09: listed at the top of the [Phase 2 plan](docs/phase-2-plan.md). Some refine the ones above: sentence splitting, the lock screen, position scope and choosing a source.
 
 ## Research
 
@@ -76,7 +78,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 1. In-app title search across the on-by-default sites.
 2. "Add to library", a library screen and a full chapter list for each book.
 3. A reader view with sentence highlight, follow mode, tap to jump and "Back to voice".
-4. On-device speech with Phonon 31M q8 at 2 to 4 threads, with Everly (female) and Trevor (male) in settings. The model is 64.5 MB and each voice is 256 KB.
+4. On-device speech with Phonon 31M q8 at 2 threads ([decided](docs/decisions/generation-pacing.md)), with Everly (female) and Trevor (male) in settings. The model is 64.5 MB and each voice is 256 KB.
 5. Screen-off playback with lock-screen and notification controls.
 6. Position saving, resume and the undo list, shared by reading and listening.
 7. Auto-advance, with only the next chapter loaded ahead.
@@ -93,7 +95,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 - Generation never runs the phone flat out: at most 4 threads, and at most one chapter ahead.
 - A real chapter from each enabled site keeps all its short dialogue lines.
 
-**Data, stored in SQLite through Room:** `source`, `book`, `chapter` (text fetched on demand), `sentence`, `position`, `position_history` and `audio_cache`. Cached audio is keyed by the chapter text's hash and the voice, which keeps the [laptop idea](docs/decisions/laptop-precompute.md#what-version-1-does-to-stay-ready) possible later.
+**Data, stored in SQLite through Room:** `source`, `book`, `chapter` (text fetched on demand), `sentence`, `position` and `position_history`. Sentence audio is files only, with no table, keyed by the chapter text's hash and the voice ([Storage](docs/decisions/storage.md)), which keeps the [laptop idea](docs/decisions/laptop-precompute.md#what-version-1-does-to-stay-ready) possible later.
 
 ## Roadmap
 

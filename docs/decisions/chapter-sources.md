@@ -18,7 +18,7 @@ The [plugin index](https://raw.githubusercontent.com/LNReader/lnreader-plugins/p
 **The flow you described:**
 
 1. Type a title and submit. Lantern asks every enabled site once and shows results as they arrive, grouped by title.
-2. Tap "Add to library". Lantern picks the site listing the most chapters.
+2. Tap "Add to library". Lantern picks the site listing the most chapters. Changed 2026-11-09: you tap the listing you want ([Choosing a source](choosing-a-source.md)).
 3. Open the book to see all its chapters, then read or listen to any of them.
 
 I checked your example. "Ode of the Brave" is on AllNovelFull, with chapter links up to at least 104, and on NovelBuddy. A general web search didn't find it, so in-app search would have saved you real time here.

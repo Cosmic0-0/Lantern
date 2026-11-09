@@ -12,6 +12,8 @@ A link means I read that source. [unverified] marks something I could not confir
 
 **Recommendation: the text is the source of truth and audio is a disposable cache.** A position is the chapter ID, sentence index and milliseconds into that sentence. Reading and listening share it.
 
+Changed for the MVP on 2026-11-09: no milliseconds and one position per book ([Position scope](position-scope.md)), the spikes' regex splitter instead of `BreakIterator` ([Sentence splitting](sentence-splitting.md)), and the one-item lock screen deferred ([Lock screen](lock-screen.md)).
+
 - **Sync.** Each sentence is one Media3 playlist item. [The docs](https://developer.android.com/media/media3/exoplayer/playlists) say transitions are seamless, items can be added during playback, and `onMediaItemTransition` fires on each change. That callback drives both the highlight and the save. In [Spike 2](../spikes/spike-2-playback.md) you heard no clicks or gaps between WAV items on the A26.
 - **Lock screen.** A [`ForwardingSimpleBasePlayer`](https://developer.android.com/reference/androidx/media3/common/SimpleBasePlayer) shows the chapter as one item instead of hundreds of sentences. Skip buttons move one sentence.
 - **Sentence not ready yet.** The player waits in a buffering state instead of ending, so the service stays alive. Android's docs say to [keep it active through interruptions under 10 minutes](https://developer.android.com/about/versions/17/changes/bg-audio). [Spike 2](../spikes/spike-2-playback.md) confirmed it on 2026-11-09: waits came only at the start and after skips, and playback never ended.
