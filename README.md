@@ -6,9 +6,7 @@ It targets a Samsung Galaxy A26. A laptop app that generates chapters with a big
 
 ## Status
 
-Lantern is in planning. The repo has no app code yet, so there is nothing to build or install.
-
-The phone voice is chosen and the [open questions](PLAN.md#open-questions) are answered. The next step is approving the plan, then running the three spikes in the [roadmap](PLAN.md#roadmap).
+The plan was approved on 2026-11-09. Lantern is now in Phase 1 of the [roadmap](PLAN.md#roadmap), where three throwaway spikes test the riskiest parts. The repo has no app code yet, so there is nothing to build or install.
 
 ## Planned stack
 

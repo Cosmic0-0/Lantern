@@ -1,6 +1,6 @@
 # Lantern plan
 
-Status: second draft for your approval, updated 2026-11-08: Phonon is the voice, and the laptop app and phone precompute are dropped. Lantern itself isn't built yet.
+Status: approved 2026-11-09. Phonon is the voice, and the laptop app and phone precompute are dropped. Phase 1 has started; Lantern itself isn't built yet.
 
 A link means I read that source. [unverified] marks something I could not confirm. RTF means seconds of computing per second of speech, so below 1 is faster than real time.
 
@@ -8,7 +8,7 @@ A link means I read that source. [unverified] marks something I could not confir
 
 Start here when picking this up in a new chat. Last updated 2026-11-09.
 
-The plan, reference review, site tests and phone voice tests are done. No app code exists, and you haven't approved the plan yet, so nothing gets built until you do.
+The plan, reference review, site tests and phone voice tests are done. You approved the plan on 2026-11-09, and Phase 1 has started. No app code exists yet.
 
 **Next steps, in order:**
 
@@ -16,8 +16,9 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 2. ~~Decide on the laptop precompute idea.~~ Dropped 2026-11-08, because no better model than Phonon fits the laptop's 4 GB GPU. It may return if better models come out. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 3. ~~Check the phone-made Phonon samples.~~ Done 2026-11-08: samples 12 and 13, made on the phone, sound the same to you as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
 4. ~~Answer the rest of the [open questions](#open-questions).~~ Done 2026-11-09: the default site list stands, English only, and a fresh build rather than an LNReader fork.
-5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
-6. You approve the plan, then Phase 1 starts.
+5. The baseline test in Phase 0 of the [roadmap](#roadmap) wasn't done before approval. You can still try it.
+6. ~~Approve the plan.~~ Approved 2026-11-09.
+7. You install Android Studio, then the three spikes in Phase 1 run.
 
 **Current setup:**
 
