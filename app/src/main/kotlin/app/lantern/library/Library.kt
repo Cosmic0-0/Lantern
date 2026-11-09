@@ -1,8 +1,12 @@
 package app.lantern.library
 
 import androidx.room.withTransaction
+import app.lantern.core.ChapterMatch
 import app.lantern.core.ChapterPlan
+import app.lantern.core.ChapterRef
 import app.lantern.core.History
+import app.lantern.core.OldChapter
+import app.lantern.core.SwitchPlan
 import app.lantern.core.Listing
 import app.lantern.core.Position
 import app.lantern.core.Sentence
@@ -213,7 +217,108 @@ class Library(
     /** Deletes the book and everything that belongs to it. */
     suspend fun delete(bookId: Long) = dao.deleteBook(bookId)
 
+    // ---- Switching source (docs/decisions/switching-source.md) ----
+
+    /**
+     * What moving [bookId] to [listing] would do, without changing anything: fetches the listing's chapter list and
+     * matches it against the book's chapters. Throws [IllegalArgumentException] for pasted text, or when the listing
+     * is already a book in the library; [NoSuchElementException] for a missing book; [IOException] if the fetch fails.
+     */
+    suspend fun previewSwitch(bookId: Long, listing: Listing): SwitchPreview {
+        checkSwitchable(bookId, listing)
+        val refs = source.chapters(listing)
+        if (refs.isEmpty()) throw IOException("${listing.title} lists no chapters")
+        val old = dao.chapterList(bookId)
+        val plan = ChapterMatch.plan(old.map { OldChapter(it.title, it.textHash != null) }, refs)
+        val position = dao.positionOf(bookId)
+        val at = position?.let { p -> old.indexOfFirst { it.id == p.chapterId } }?.takeIf { it >= 0 }
+        val landing = at?.let { o ->
+            when (val row = plan.rows[landingRow(plan, o)]) {
+                is SwitchPlan.Row.Matched -> if (row.old == o) refs[row.new].title else "start of ${refs[row.new].title}"
+                is SwitchPlan.Row.KeptOld -> if (row.old == o) old[o].title else "start of ${old[row.old].title}"
+                is SwitchPlan.Row.Added -> "start of ${refs[row.new].title}"
+            }
+        }
+        return SwitchPreview(bookId, listing, refs, plan, old.size, at?.let { old[it].title }, landing)
+    }
+
+    /**
+     * Applies [preview] in one transaction: the book reads from the new listing from now on. Matched chapters keep
+     * their rows, so the position, history and fetched text stay; chapters only on the new source are added; old-only
+     * chapters stay if fetched and go otherwise. The plan is worked out again from the book as it is now, and if that
+     * differs from the preview (the book changed meanwhile), throws [IllegalStateException] and changes nothing.
+     */
+    suspend fun switchSource(preview: SwitchPreview) {
+        val bookId = preview.bookId
+        val listing = preview.listing
+        db.withTransaction {
+            checkSwitchable(bookId, listing)
+            val old = dao.chapterList(bookId)
+            val plan = ChapterMatch.plan(old.map { OldChapter(it.title, it.textHash != null) }, preview.chapters)
+            check(old.size == preview.oldCount && plan == preview.plan) { "The book changed since the preview. Try again." }
+
+            // Where the position goes, as a plan row, worked out before rows are renumbered or removed.
+            val position = dao.positionOf(bookId)
+            val at = position?.let { p -> old.indexOfFirst { it.id == p.chapterId } }?.takeIf { it >= 0 }
+            val landing = at?.takeIf { it in plan.removed }?.let { landingRow(plan, it) }
+
+            dao.deleteChapters(plan.removed.map { old[it].id })
+            dao.shiftNumbers(bookId, NUMBER_OFFSET)
+            val rowIds = plan.rows.mapIndexed { number, row ->
+                when (row) {
+                    is SwitchPlan.Row.Matched -> old[row.old].let { chapter ->
+                        val ref = preview.chapters[row.new]
+                        dao.updateChapter(chapter.id, number, ref.path, if (chapter.textHash != null) chapter.title else ref.title)
+                        chapter.id
+                    }
+                    is SwitchPlan.Row.KeptOld -> old[row.old].id.also { dao.setChapterNumber(it, number) }
+                    is SwitchPlan.Row.Added -> preview.chapters[row.new].let { ref ->
+                        dao.insertChapter(ChapterEntity(bookId = bookId, number = number, path = ref.path, title = ref.title, textHash = null))
+                    }
+                }
+            }
+            if (landing != null) dao.movePosition(bookId, rowIds[landing], 0)
+
+            val gone = plan.removed.map { old[it].id }.toSet()
+            val history = dao.history(bookId)
+            if (history.any { it.chapterId in gone }) {
+                dao.deleteHistory(bookId)
+                dao.insertHistory(
+                    history.filter { it.chapterId !in gone }.mapIndexed { rank, p ->
+                        HistoryEntity(bookId = bookId, chapterId = p.chapterId, sentence = p.sentence, rank = rank)
+                    },
+                )
+            }
+            dao.setBookSource(bookId, listing.sourceId, listing.path, listing.coverUrl ?: dao.book(bookId)?.coverUrl)
+        }
+    }
+
+    private suspend fun checkSwitchable(bookId: Long, listing: Listing) {
+        val book = dao.book(bookId) ?: throw NoSuchElementException("No book $bookId")
+        require(book.sourceId != null) { "Pasted text has no source to switch" }
+        dao.bookId(listing.sourceId, listing.path)?.let { other ->
+            require(other == bookId) { "${listing.title} is already a separate book in your library" }
+        }
+    }
+
+    /**
+     * The plan row a position on old chapter [old] ends up in: its own row, or, when the chapter is removed, the next
+     * old chapter that stays (by old order), else the one before it, else the first row.
+     */
+    private fun landingRow(plan: SwitchPlan, old: Int): Int {
+        fun rowOf(o: Int) = plan.rows.indexOfFirst {
+            (it is SwitchPlan.Row.Matched && it.old == o) || (it is SwitchPlan.Row.KeptOld && it.old == o)
+        }
+        rowOf(old).takeIf { it >= 0 }?.let { return it }
+        val staying = plan.rows.mapNotNull { (it as? SwitchPlan.Row.Matched)?.old ?: (it as? SwitchPlan.Row.KeptOld)?.old }
+        val target = staying.filter { it > old }.minOrNull() ?: staying.filter { it < old }.maxOrNull()
+        return target?.let(::rowOf) ?: 0
+    }
+
     private companion object {
+        /** Above any real chapter number, so renumbering never clashes with the unique (bookId, number) index. */
+        const val NUMBER_OFFSET = 1_000_000
+
         const val TITLE_MAX = 80
 
         fun sentenceEntities(chapterId: Long, sentences: List<Sentence>): List<SentenceEntity> =
@@ -223,4 +328,25 @@ class Library(
         fun textHash(sentences: List<Sentence>): String =
             MessageDigest.getInstance("SHA-256").digest(sentences.joinToString("\n") { it.text }.toByteArray()).toHexString()
     }
+}
+
+/**
+ * What switching [bookId] to [listing] would do (docs/decisions/switching-source.md). [chapters] is the listing's
+ * chapter list and [plan] the match against the book's [oldCount] chapters. [positionFrom] is the title of the
+ * chapter the position is on and [positionTo] where it lands: the matching chapter's title on the new source, or
+ * "start of <title>" when its chapter goes. Both are null for a book with no position.
+ */
+data class SwitchPreview(
+    val bookId: Long,
+    val listing: Listing,
+    val chapters: List<ChapterRef>,
+    val plan: SwitchPlan,
+    val oldCount: Int,
+    val positionFrom: String?,
+    val positionTo: String?,
+) {
+    val matched: Int get() = plan.rows.count { it is SwitchPlan.Row.Matched }
+    val added: Int get() = plan.rows.count { it is SwitchPlan.Row.Added }
+    val keptOld: Int get() = plan.rows.count { it is SwitchPlan.Row.KeptOld }
+    val removed: Int get() = plan.removed.size
 }

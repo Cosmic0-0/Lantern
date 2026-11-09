@@ -434,4 +434,138 @@ class LibraryTest {
         assertNull(library.nextChapter(chapters[2].id))
         assertNull(library.nextChapter(-1))
     }
+
+    // ---- Switching source (docs/decisions/switching-source.md) ----
+
+    private val other = Listing("other", "/novel/b", "Book A (Other)", "http://img/b.jpg")
+
+    /** A book on "src" with numbered chapters [titles] at /a/<n>, each with two sentences of text. */
+    private suspend fun numberedBook(vararg titles: String): Long {
+        source.refs = titles.mapIndexed { i, t -> ChapterRef("/a/$i", t) }
+        titles.indices.forEach { source.texts["/a/$it"] = "Old text $it. Second sentence $it." }
+        return library.add(listing)
+    }
+
+    /** Points the fake source at the other listing's chapters, at /b/<n>. */
+    private fun otherSourceHas(vararg titles: String) {
+        source.refs = titles.mapIndexed { i, t -> ChapterRef("/b/$i", t) }
+    }
+
+    @Test
+    fun aSwitchKeepsThePositionAndFetchedText() = runBlocking {
+        val id = numberedBook("Chapter 1", "Chapter 2", "Chapter 3")
+        val two = chaptersOf(id)[1]
+        val before = library.sentences(two.id)
+        library.savePosition(Position(id, two.id, 1))
+        otherSourceHas("Chapter 1 - Rain", "Chapter 2 - Home", "Chapter 3 - End", "Chapter 4 - More")
+        val calls = source.textCalls.size
+
+        val preview = library.previewSwitch(id, other)
+        assertEquals(3, preview.matched)
+        assertEquals(1, preview.added)
+        assertEquals(0, preview.removed)
+        assertEquals("Chapter 2", preview.positionFrom)
+        assertEquals("Chapter 2 - Home", preview.positionTo)
+        library.switchSource(preview)
+
+        assertEquals(Position(id, two.id, 1), library.position(id).first())
+        assertEquals(before, library.sentences(two.id))
+        assertEquals(calls, source.textCalls.size)
+        val after = chaptersOf(id)
+        assertEquals(listOf("Chapter 1 - Rain", "Chapter 2", "Chapter 3 - End", "Chapter 4 - More"), after.map { it.title })
+        assertEquals(listOf(0, 1, 2, 3), after.map { it.number })
+        assertEquals(two.id, after[1].id)
+        val book = library.book(id)!!
+        assertEquals("other", book.sourceId)
+        assertEquals("http://img/b.jpg", book.coverUrl)
+        assertEquals(listOf("/b/0", "/b/1", "/b/2", "/b/3"), (0..3).map { n ->
+            db.openHelper.readableDatabase.query("SELECT path FROM chapter WHERE bookId = ? AND number = ?", arrayOf<Any>(id, n)).use { it.moveToFirst(); it.getString(0) }
+        })
+    }
+
+    @Test
+    fun anUnfetchedOldOnlyChapterGoesAndThePositionMovesOn() = runBlocking {
+        val id = numberedBook("Chapter 1", "Interlude", "Chapter 2", "Chapter 3", "Chapter 4")
+        val old = chaptersOf(id)
+        library.sentences(old[1].id) // the interlude is fetched, so it stays
+        library.savePosition(Position(id, old[3].id, 5)) // chapter 3, not fetched
+        otherSourceHas("Chapter 1", "Chapter 2", "Chapter 4")
+
+        val preview = library.previewSwitch(id, other)
+        assertEquals(3, preview.matched)
+        assertEquals(1, preview.keptOld)
+        assertEquals(1, preview.removed)
+        assertEquals("start of Chapter 4", preview.positionTo)
+        library.switchSource(preview)
+
+        val after = chaptersOf(id)
+        assertEquals(listOf("Chapter 1", "Interlude", "Chapter 2", "Chapter 4"), after.map { it.title })
+        assertEquals(listOf(old[0].id, old[1].id, old[2].id, old[4].id), after.map { it.id })
+        assertEquals(Position(id, old[4].id, 0), library.position(id).first())
+        assertEquals(0, count("SELECT COUNT(*) FROM chapter WHERE id = ?", old[3].id))
+    }
+
+    @Test
+    fun historyOnRemovedChaptersIsDropped() = runBlocking {
+        val id = numberedBook("Chapter 1", "Chapter 2", "Chapter 3")
+        val old = chaptersOf(id)
+        library.recordJump(Position(id, old[2].id, 0))
+        library.recordJump(Position(id, old[0].id, 2))
+        otherSourceHas("Chapter 1", "Chapter 2")
+
+        library.switchSource(library.previewSwitch(id, other))
+
+        assertEquals(listOf(Position(id, old[0].id, 2)), library.history(id))
+    }
+
+    @Test
+    fun aRefreshAfterASwitchAddsOnlyNewChapters() = runBlocking {
+        val id = numberedBook("Chapter 1", "Chapter 2")
+        library.sentences(chaptersOf(id)[0].id)
+        otherSourceHas("Chapter 1", "Chapter 2")
+        library.switchSource(library.previewSwitch(id, other))
+
+        otherSourceHas("Chapter 1", "Chapter 2", "Chapter 3")
+        assertEquals(1, library.refresh(id))
+        assertEquals(listOf("Chapter 1", "Chapter 2", "Chapter 3"), chaptersOf(id).map { it.title })
+    }
+
+    @Test
+    fun switchingToAListingAlreadyInTheLibraryIsRefused() = runBlocking {
+        val id = numberedBook("Chapter 1")
+        library.add(other)
+        try {
+            library.previewSwitch(id, other)
+            fail("expected an IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+        }
+        assertEquals("src", library.book(id)!!.sourceId)
+    }
+
+    @Test
+    fun pastedTextCannotSwitch() = runBlocking {
+        val id = library.paste("Just some text.")
+        try {
+            library.previewSwitch(id, other)
+            fail("expected an IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+        }
+    }
+
+    @Test
+    fun aBookThatChangedSinceThePreviewIsNotSwitched() = runBlocking {
+        val id = numberedBook("Chapter 1", "Chapter 2")
+        otherSourceHas("Chapter 1", "Chapter 2")
+        val preview = library.previewSwitch(id, other)
+        source.refs = listOf(ChapterRef("/a/0", "Chapter 1"), ChapterRef("/a/1", "Chapter 2"), ChapterRef("/a/2", "Chapter 3"))
+        assertEquals(1, library.refresh(id))
+
+        try {
+            library.switchSource(preview)
+            fail("expected an IllegalStateException")
+        } catch (_: IllegalStateException) {
+        }
+        assertEquals("src", library.book(id)!!.sourceId)
+        assertEquals(3, chaptersOf(id).size)
+    }
 }

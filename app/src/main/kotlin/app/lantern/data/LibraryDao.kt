@@ -115,4 +115,31 @@ internal interface LibraryDao {
 
     @Insert
     suspend fun insertHistory(rows: List<HistoryEntity>)
+
+    // ---- Switching source (docs/decisions/switching-source.md) ----
+
+    @Query("SELECT id, bookId, number, title, textHash FROM chapter WHERE bookId = :bookId ORDER BY number")
+    suspend fun chapterList(bookId: Long): List<Chapter>
+
+    @Query("SELECT bookId, chapterId, sentence FROM position WHERE bookId = :bookId")
+    suspend fun positionOf(bookId: Long): Position?
+
+    /** Moves every chapter number of the book up by [offset], so new numbers can be given without clashing. */
+    @Query("UPDATE chapter SET number = number + :offset WHERE bookId = :bookId")
+    suspend fun shiftNumbers(bookId: Long, offset: Int)
+
+    @Query("UPDATE chapter SET number = :number, path = :path, title = :title WHERE id = :id")
+    suspend fun updateChapter(id: Long, number: Int, path: String?, title: String)
+
+    @Query("UPDATE chapter SET number = :number WHERE id = :id")
+    suspend fun setChapterNumber(id: Long, number: Int)
+
+    @Query("DELETE FROM chapter WHERE id IN (:ids)")
+    suspend fun deleteChapters(ids: List<Long>)
+
+    @Query("UPDATE book SET sourceId = :sourceId, path = :path, coverUrl = :coverUrl WHERE id = :id")
+    suspend fun setBookSource(id: Long, sourceId: String, path: String, coverUrl: String?)
+
+    @Query("UPDATE position SET chapterId = :chapterId, sentence = :sentence WHERE bookId = :bookId")
+    suspend fun movePosition(bookId: Long, chapterId: Long, sentence: Int)
 }

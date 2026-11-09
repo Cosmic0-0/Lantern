@@ -102,4 +102,12 @@ class ListingsTest {
             Listings.groupByTitle(listOf(bang1, question, bracket, bang2), order),
         )
     }
+
+    @Test
+    fun `sameTitle follows the grouping rule`() {
+        assertEquals(true, Listings.sameTitle("Ode of the Brave", "ode of the brave (Web Novel)"))
+        assertEquals(true, Listings.sameTitle("Don't Stop", "Dont Stop"))
+        assertEquals(false, Listings.sameTitle("Ode of the Brave", "MTL - Ode of the Brave"))
+        assertEquals(false, Listings.sameTitle("!!!", "???"))
+    }
 }

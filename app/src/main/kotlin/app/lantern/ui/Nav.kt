@@ -28,6 +28,7 @@ sealed interface Screen {
     data class Reader(val bookId: Long, val chapterId: Long) : Screen
     data object Settings : Screen
     data object Paste : Screen
+    data class SwitchSource(val bookId: Long) : Screen
 }
 
 private fun Screen.encode(): String = when (this) {
@@ -37,6 +38,7 @@ private fun Screen.encode(): String = when (this) {
     is Screen.Reader -> "reader:$bookId:$chapterId"
     Screen.Settings -> "settings"
     Screen.Paste -> "paste"
+    is Screen.SwitchSource -> "switch:$bookId"
 }
 
 private fun decodeScreen(text: String): Screen {
@@ -47,6 +49,7 @@ private fun decodeScreen(text: String): Screen {
         "reader" -> Screen.Reader(parts[1].toLong(), parts[2].toLong())
         "settings" -> Screen.Settings
         "paste" -> Screen.Paste
+        "switch" -> Screen.SwitchSource(parts[1].toLong())
         else -> Screen.Library
     }
 }
@@ -95,6 +98,7 @@ fun LanternRoot() {
             is Screen.Reader -> ReaderScreen(nav, screen.bookId, screen.chapterId)
             Screen.Settings -> SettingsScreen(nav)
             Screen.Paste -> PasteScreen(nav)
+            is Screen.SwitchSource -> SwitchSourceScreen(nav, screen.bookId)
         }
     }
 }
