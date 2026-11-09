@@ -23,11 +23,15 @@ The plan, reference review, site tests and phone voice tests are done. You appro
 9. ~~Spike 2, playback.~~ Done 2026-11-09: playback ran for about 45 minutes, mostly with the screen off, and resumed within one sentence after a kill, a force stop and a reboot. The phone call is still untested. See [Spike 2](docs/spikes/spike-2-playback.md).
 10. ~~Spike 3, sources.~~ Done 2026-11-09: plugins run in QuickJS on the phone. AllNovelFull, ReadNovelFull and NovelBuddy work fully, NovelCool is dropped and Novel Bin is broken. See [Spike 3](docs/spikes/spike-3-sources.md).
 11. ~~Plan the Phase 2 MVP build.~~ Written 2026-11-09: [Phase 2 plan](docs/phase-2-plan.md), with the [architecture sketch](docs/phase-2-architecture.md), the glossary in [CONTEXT.md](CONTEXT.md) and 13 decisions in `docs/decisions/`, all as I recommended. [Starting Phase 2](docs/phase-2-start.md) has the background. Phase 1 leaves two small things open: the phone call test and Wuxiaworld.
-12. **Next: you approve the [Phase 2 plan](docs/phase-2-plan.md).** Then building starts with step 1, the skeleton and toolchain. No app code exists until then.
+12. ~~Approve the Phase 2 plan.~~ Approved 2026-11-09.
+13. ~~Build the MVP, steps 1 to 8.~~ Done 2026-11-09: the app is in `app/`, `core/` and `sources/`, on branch `worktree-phase-2-plan`, and installed on your A26. Each step's tests and phone results are in the [Phase 2 plan](docs/phase-2-plan.md).
+14. **Next: step 9, acceptance on your A26.** The checks that need you are listed under steps 7 and 8 of the [Phase 2 plan](docs/phase-2-plan.md): three chapters in a row with the screen off, Bluetooth off, a reboot, a phone call, both voices and the speed change by ear, and a day of normal use. After that: update the README, uninstall the spike apps, and plan Phase 3.
 
 **Current setup:**
 
-- All commits are on `master`. There is no `main` branch. Ask before every push.
+- Phase 2 work is on branch `worktree-phase-2-plan`, built on `master`, and isn't merged or pushed yet. There is no `main` branch. Ask before every push.
+- Build and phone driver: `tools/lantern.sh`. A fresh checkout needs `npm ci && npm run build` in `sources/js`, and `local.properties` with `sdk.dir`, `lantern.benchDir`, `lantern.modelDir` and `lantern.voicesDir` (see `app/build.gradle.kts`).
+- Debug builds include two screens, for checks from `adb`: `DebugActivity` (generate a chapter and time it) and `DebugPlayerActivity` (send commands to the player).
 - Android Studio is installed, with its bundled JDK and the SDK in `AppData\Local\Android\Sdk`. `adb`, Rust, the Android NDK, the Phonon source and the built `libptts_ffi.so` are in the gitignored `.bench/` folder.
 - Spike code is in `spikes/`. The three spike apps (`app.lantern.spike.engine`, `.playback` and `.sources`) are installed on the phone, the first two with the Phonon model in their files folders.
 - Gradle 9.6.0 is cached in `~/.gradle`, because downloads from `services.gradle.org` time out.
