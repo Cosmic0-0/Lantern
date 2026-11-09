@@ -27,8 +27,12 @@ The cost is a separate Windows app shell later. To keep that cheap, the chapter 
 | Fresh Kotlin app that runs LNReader plugins | Build ordinary Compose screens, reuse site parsing | All of it, as designed in [TTS engine](voice-engine.md) and [Position tracking](position-tracking.md) | Recommended |
 | Fresh Kotlin app with hand-written adapters | Build screens and 3 to 5 parsers | All of it | Fallback if plugins fail in [Spike 3](../../PLAN.md#roadmap) |
 
-Reliable audio and exact position are the reason to build at all, and every fork would need those rewritten. Search screens are routine, and the hard part, site parsing that keeps working, is what the plugins provide. Forking LNReader is the closest alternative, so I would revisit this once you've tried it in [Phase 0](../../PLAN.md#roadmap).
+Reliable audio and exact position are the reason to build at all, and every fork would need those rewritten. Search screens are routine, and the hard part, site parsing that keeps working, is what the plugins provide. Forking LNReader is the closest alternative. You chose a fresh build, recorded under [Your choice](#your-choice).
 
 **Installing on your phone costs nothing.** [ADB installs are exempt](https://developer.android.com/developer-verification/guides/faq) from Google's developer verification, which goes global in 2027, and a USB install worked on your phone on 2026-11-07. A free limited-distribution account covering 20 devices is the backup. You don't need the Play Store.
 
 **Samsung setup.** Add Lantern to "Apps that won't be put to sleep" and set its battery use to unrestricted. [dontkillmyapp](https://dontkillmyapp.com/samsung) says foreground services should work properly since One UI 6, but marks that claim unverified, so the tests in the [roadmap](../../PLAN.md#roadmap) check it.
+
+## Your choice
+
+**Decided 2026-11-09: a fresh build, not an LNReader fork.** You chose this before trying the Phase 0 baseline. Two results would reopen it: the baseline test in [Phase 0](../../PLAN.md#roadmap) feeling close enough to what you want, or plugins failing in QuickJS in [Spike 3](../../PLAN.md#roadmap), which would take away the free site parsing a fresh build relies on.

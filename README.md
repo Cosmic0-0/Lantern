@@ -8,7 +8,7 @@ It targets a Samsung Galaxy A26. A laptop app that generates chapters with a big
 
 Lantern is in planning. The repo has no app code yet, so there is nothing to build or install.
 
-The phone voice is chosen. The next steps are answering the remaining [open questions](PLAN.md#open-questions) and approving the plan, then running the three spikes in the [roadmap](PLAN.md#roadmap).
+The phone voice is chosen and the [open questions](PLAN.md#open-questions) are answered. The next step is approving the plan, then running the three spikes in the [roadmap](PLAN.md#roadmap).
 
 ## Planned stack
 

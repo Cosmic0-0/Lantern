@@ -15,7 +15,7 @@ The plan, reference review, site tests and phone voice tests are done. No app co
 1. ~~Choose a voice setup.~~ Done 2026-11-08: Phonon 31M with voices Everly and Trevor, which you preferred to Supertonic and which ran faster on the phone. See [TTS engine](docs/decisions/voice-engine.md#your-choice).
 2. ~~Decide on the laptop precompute idea.~~ Dropped 2026-11-08, because no better model than Phonon fits the laptop's 4 GB GPU. It may return if better models come out. See [Laptop precompute](docs/decisions/laptop-precompute.md).
 3. ~~Check the phone-made Phonon samples.~~ Done 2026-11-08: samples 12 and 13, made on the phone, sound the same to you as the laptop-made ones. Phone precompute was reviewed and [dropped](docs/decisions/laptop-precompute.md#phone-precompute-dropped) on 2026-11-08.
-4. You answer the last [open question](#open-questions), fresh build or LNReader fork. The site list and English only were answered 2026-11-09.
+4. ~~Answer the rest of the [open questions](#open-questions).~~ Done 2026-11-09: the default site list stands, English only, and a fresh build rather than an LNReader fork.
 5. You try the baseline test in Phase 0 of the [roadmap](#roadmap), if you want. It hasn't been done.
 6. You approve the plan, then Phase 1 starts.
 
@@ -48,7 +48,7 @@ Your answers set these constraints:
 
 The recommended path needs no account, login or backend. The only option that would need accounts is cloud TTS, which I rejected.
 
-- Decision 1, [app type](docs/decisions/app-type.md): native Kotlin, Jetpack Compose and Media3.
+- Decision 1, [app type](docs/decisions/app-type.md): a fresh native app in Kotlin, Jetpack Compose and Media3, not an LNReader fork.
 - Decision 2, [TTS engine](docs/decisions/voice-engine.md): on-device only, with Phonon's own runtime on the phone and sherpa-onnx as the fallback.
 - Decision 3, [finding and loading chapters](docs/decisions/chapter-sources.md): LNReader plugins, run inside Lantern.
 - Decision 4, [position tracking](docs/decisions/position-tracking.md): the text is the source of truth and audio is a disposable cache.
@@ -117,7 +117,7 @@ The smallest version I think you would use daily: search a title, add it, press 
 Decisions for you:
 
 1. ~~Is the [default site list](docs/research/site-tests.md) OK?~~ Answered 2026-11-09: yes. Sites that object stay off by default, and you can turn one on per site, accepting the risk under [Decision 3](docs/decisions/chapter-sources.md).
-2. **Fresh build or LNReader fork?** I recommend fresh. Tell me after Phase 0 if LNReader felt close to what you want, because that could change it. The trade-offs are in [App type](docs/decisions/app-type.md), under "Build fresh or fork?".
+2. ~~Fresh build or LNReader fork?~~ Answered 2026-11-09: fresh build. See [App type](docs/decisions/app-type.md#your-choice).
 3. ~~English only?~~ Answered 2026-11-09: yes, English only.
 4. ~~Which voice setup?~~ Answered 2026-11-08: Phonon 31M, voices Everly and Trevor.
 5. ~~Laptop precompute?~~ Answered 2026-11-08: dropped for now, kept as a future possibility. See [Laptop precompute](docs/decisions/laptop-precompute.md).
