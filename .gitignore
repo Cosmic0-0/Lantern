@@ -1,2 +1,10 @@
 # Local benchmark tools, models and builds
 .bench/
+
+# Gradle and IDE
+build/
+.gradle/
+local.properties
+.idea/
+*.iml
+.kotlin/

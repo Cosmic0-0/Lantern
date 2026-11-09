@@ -1,6 +1,6 @@
 # Phase 2 plan: the MVP
 
-Status: proposed 2026-11-09, waiting for your approval. No app code is written until you approve.
+Status: approved 2026-11-09. Step 1 done 2026-11-09.
 
 Scope and the "done means" checklist are in [PLAN.md](../PLAN.md#mvp-scope). The module shape is in [Phase 2 architecture](phase-2-architecture.md), terms in [CONTEXT.md](../CONTEXT.md), and the decisions made for this phase are:
 
@@ -24,6 +24,7 @@ Three modules building with the versions in [Toolchain](decisions/toolchain.md):
 - **Tests:** `gradlew :core:test :sources:test :app:assembleDebug` passes on the laptop. The quickjs test proves `sources` can be tested on Windows.
 - **Phone check:** the app installs and opens, and the log shows the Room database was created.
 - **If it fails:** Room 3.0, then KSP 2.3.10, then I ask you. If quickjs-kt won't run on the Windows JVM, `sources` becomes an Android library tested on the phone, and I tell you.
+- **Result, 2026-11-09:** passed. Laptop tests and the APK build passed with no fallback needed, the QuickJS test ran on Windows, and on the A26 the app cold-started in 489 ms and logged `database ready books=0`.
 
 ### 2. Text preparation (`core`)
 

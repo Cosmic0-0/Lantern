@@ -13,7 +13,7 @@ quickjs-kt 1.0.15 is compiled with Kotlin 2.4, and AGP 9.5.1's built-in Kotlin i
 | Media3 | 1.11.1 | Cached, used in Spike 2 |
 | quickjs-kt | 1.0.15 | Cached for Android and JVM. The JVM jar includes a Windows x64 library |
 
-**Risk:** Room's KSP on AGP 9.5.1 with built-in Kotlin raised to 2.4.10 is [unverified]. Step 1 of the build makes an empty skeleton with one Room entity and installs it on the phone before any feature code. If Room's KSP fails, try Room 3.0, then KSP 2.3.10, then ask.
+**Risk, cleared 2026-11-09:** Room's KSP on AGP 9.5.1 with built-in Kotlin raised to 2.4.10 was unverified. Step 1 built the three-module skeleton with one Room entity: KSP generated the database and exported its schema, quickjs-kt evaluated JavaScript in a JVM test on Windows, and the app installed and created its database on the A26. Also pinned: `activity-compose` 1.13.0, `androidx.test.ext:junit` 1.3.0 and `androidx.test:runner` 1.7.0, the latest stable versions that day.
 
 ## Your choice
 
