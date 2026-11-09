@@ -1,6 +1,9 @@
 # Local benchmark tools, models and builds
 .bench/
 
+# Real chapter texts for local tests: copyrighted, so never committed
+core/src/test/resources/chapters/
+
 # Gradle and IDE
 build/
 .gradle/

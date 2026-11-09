@@ -30,7 +30,7 @@ Three modules building with the versions in [Toolchain](decisions/toolchain.md):
 
 `TextPrep.sentences(chapterText)`: NFKC, the [junk line](decisions/junk-lines.md) filter, then the spikes' [splitter](decisions/sentence-splitting.md).
 
-- **Tests:** the 7 real chapters from Spike 3 are copied into test resources. Every short dialogue line in them survives. The ad line and the maths-letter watermark are removed. Abbreviations (Mr., Dr., A.I., e.g.), ellipses, closing quotes, a website named inside dialogue, empty and whitespace-only input.
+- **Tests:** the real chapters from Spike 3 are copied into `core/src/test/resources/chapters/`, which is gitignored because the texts are copyrighted and the repo has a GitHub remote. The test skips them when the folder is absent. Committed tests use one-line excerpts of each case. Every short dialogue line in them survives. The ad line and the maths-letter watermark are removed. Abbreviations (Mr., Dr., A.I., e.g.), ellipses, closing quotes, a website named inside dialogue, empty and whitespace-only input.
 - **Phone check:** none, since this is pure logic. Step 6 checks it on real fetched text.
 
 ### 3. Position and read-ahead rules (`core`)
