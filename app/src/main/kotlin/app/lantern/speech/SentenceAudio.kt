@@ -12,6 +12,20 @@ class SentenceAudio(private val root: File) {
 
     fun isReady(voice: String, textHash: String, index: Int): Boolean = file(voice, textHash, index).isFile
 
+    /** The indexes of the chapter's finished sentences, from one directory listing. */
+    fun ready(voice: String, textHash: String): Set<Int> =
+        finished(voice, textHash).mapNotNullTo(HashSet()) { it.name.removeSuffix(".wav").toIntOrNull() }
+
+    /** The size of the chapter's finished sentences in bytes. */
+    fun bytes(voice: String, textHash: String): Long = finished(voice, textHash).sumOf { it.length() }
+
+    /** The keys of every chapter with audio in [voice]. Phrase folders are left out. */
+    fun chapterKeys(voice: String): Set<String> =
+        File(root, voice).listFiles { f -> f.isDirectory && !f.name.startsWith(PHRASE_PREFIX) }.orEmpty().mapTo(HashSet()) { it.name }
+
+    private fun finished(voice: String, textHash: String): List<File> =
+        File(File(root, voice), textHash).listFiles { f -> f.isFile && f.name.endsWith(".wav") }.orEmpty().toList()
+
     /**
      * Writes the sentence through [produce]. If it throws or writes no samples, 300 ms of silence goes in its place, so
      * playback never stalls on one bad sentence, and [onError] gets the reason. Returns the number of samples written.
@@ -75,7 +89,9 @@ class SentenceAudio(private val root: File) {
         throw t
     }
 
-    private companion object {
-        const val SILENCE_SAMPLES = Phonon.SAMPLE_RATE * 3 / 10 // 300 ms
+    companion object {
+        /** Starts every phrase key (Generator.phraseKey), so phrase folders can be told from chapter folders. */
+        const val PHRASE_PREFIX = "phrase-"
+        private const val SILENCE_SAMPLES = Phonon.SAMPLE_RATE * 3 / 10 // 300 ms
     }
 }

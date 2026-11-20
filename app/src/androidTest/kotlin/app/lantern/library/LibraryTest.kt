@@ -643,4 +643,50 @@ class LibraryTest {
         assertEquals("src", library.book(id)!!.sourceId)
         assertEquals(3, chaptersOf(id).size)
     }
+
+    // ---- Prepared audio (docs/decisions/prepared-audio.md) ----
+
+    @Test
+    fun chaptersFromStartsAtTheChapterAndStopsAtTheCount() = runBlocking {
+        val id = library.add(listing)
+        val (one, two, three) = chaptersOf(id)
+        assertEquals(listOf(two.id, three.id), library.chaptersFrom(two.id, 5).map { it.id })
+        assertEquals(listOf(one.id, two.id), library.chaptersFrom(one.id, 2).map { it.id })
+    }
+
+    @Test
+    fun startOfIsThePositionOrTheFirstChapter() = runBlocking {
+        val id = library.add(listing)
+        val (one, two) = chaptersOf(id)
+        assertEquals(Position(id, one.id, 0), library.startOf(id))
+        library.savePosition(Position(id, two.id, 1))
+        assertEquals(Position(id, two.id, 1), library.startOf(id))
+    }
+
+    @Test
+    fun audioKeysAheadKeepsStoredChaptersFromThePositionOn() = runBlocking {
+        val id = library.add(listing)
+        val (one, two, three) = chaptersOf(id)
+        listOf(one, two, three).forEach { library.chapterText(it.id) }
+        val hashes = chaptersOf(id).associate { it.id to it.textHash!! }
+        // No position: the whole book is ahead.
+        assertEquals(hashes.values.toSet(), library.audioKeysAhead())
+        library.savePosition(Position(id, two.id, 1))
+        assertEquals(setOf(hashes.getValue(two.id), hashes.getValue(three.id)), library.audioKeysAhead())
+    }
+
+    @Test
+    fun audioKeysAheadLeavesOutUnfetchedChaptersAndUsesFixedKeys() = runBlocking {
+        val id = library.add(listing)
+        val (one, two, three) = chaptersOf(id)
+        library.chapterText(one.id)
+        library.chapterText(three.id)
+        library.addRule(id, RuleKind.FIX, "rained", "raynd") // only in chapter one
+        val rules = library.rules(id)
+        val keys = library.audioKeysAhead()
+        val oneKey = library.speech(one.id, rules).key
+        assertNotEquals(chaptersOf(id).first { it.id == one.id }.textHash, oneKey)
+        assertEquals(setOf(oneKey, chaptersOf(id).first { it.id == three.id }.textHash!!), keys)
+        assertTrue(chaptersOf(id).first { it.id == two.id }.textHash == null)
+    }
 }

@@ -136,4 +136,33 @@ class SentenceAudioTest {
         assertFalse(a.isReady("everly", "h1", 0))
         assertTrue(File(root, "everly").isDirectory)
     }
+
+    @Test
+    fun `ready lists the finished sentences of a chapter and nothing else`() {
+        audio.write("everly", "abc", 0) { it.write(FloatArray(10)) }
+        audio.write("everly", "abc", 3) { it.write(FloatArray(10)) }
+        File(root, "everly/abc/5.wav.tmp").writeText("half")
+        File(root, "everly/abc/notes.txt").writeText("x")
+        assertEquals(setOf(0, 3), audio.ready("everly", "abc"))
+        assertEquals(emptySet(), audio.ready("everly", "missing"))
+    }
+
+    @Test
+    fun `bytes counts a chapter's finished files`() {
+        audio.write("everly", "abc", 0) { it.write(FloatArray(10)) }
+        audio.write("everly", "abc", 1) { it.write(FloatArray(20)) }
+        File(root, "everly/abc/2.wav.tmp").writeText("half")
+        assertEquals(audio.file("everly", "abc", 0).length() + audio.file("everly", "abc", 1).length(), audio.bytes("everly", "abc"))
+        assertEquals(0L, audio.bytes("everly", "missing"))
+    }
+
+    @Test
+    fun `chapterKeys lists a voice's chapters, not its phrases`() {
+        audio.write("everly", "abc", 0) { it.write(FloatArray(10)) }
+        audio.write("everly", "def", 0) { it.write(FloatArray(10)) }
+        audio.write("everly", "phrase-0123", 0) { it.write(FloatArray(10)) }
+        audio.write("trevor", "ghi", 0) { it.write(FloatArray(10)) }
+        assertEquals(setOf("abc", "def"), audio.chapterKeys("everly"))
+        assertEquals(emptySet(), audio.chapterKeys("nobody"))
+    }
 }

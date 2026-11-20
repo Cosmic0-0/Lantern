@@ -19,6 +19,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import app.lantern.EventLog
 import app.lantern.core.Position
+import app.lantern.core.ReadAhead
 import app.lantern.core.Resume
 import app.lantern.lantern
 import app.lantern.core.SpeechRules
@@ -26,7 +27,7 @@ import app.lantern.library.Chapter
 import app.lantern.library.ChapterText
 import app.lantern.model.ModelInstaller
 import app.lantern.speech.Generator
-import app.lantern.speech.SentenceAudio
+import app.lantern.speech.SpeechWork
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
@@ -39,7 +40,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * Owns the player, the session and the generator (Spike 2, docs/decisions/position-tracking.md). One media item per
@@ -82,7 +82,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         EventLog.log("SERVICE", "create")
-        val audio = SentenceAudio(File(cacheDir, "audio"))
+        val audio = lantern.audio
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(SentenceDataSource.Factory(audio)))
             .setAudioAttributes(
@@ -117,6 +117,7 @@ class PlaybackService : MediaSessionService() {
         session.release()
         player.release()
         generator.close()
+        SpeechWork.listening.value = false
         super.onDestroy()
     }
 
@@ -165,24 +166,55 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    /** Fetches the chapter after [chapter] and appends it, with a spoken title, or appends a notice saying why not. */
+    /**
+     * Fetches the chapter after [chapter] and appends it, with a spoken title, or appends a notice saying why not. Then
+     * fetches the text of the chapters after that, up to [ReadAhead.CHAPTERS_AHEAD] ahead, for the generator.
+     */
     private fun onChapterStarted(chapter: Chapter) {
         EventLog.log("CHAPTER", "start ${chapter.id} \"${chapter.title}\" ${EventLog.state(this)}")
         nextJob?.cancel()
         nextJob = scope.launch {
-            var next = library.nextChapter(chapter.id) ?: return@launch appendNotice(NO_MORE_CHAPTERS)
-            if (next.id in appended) return@launch
-            // A chapter whose every sentence is skipped is passed over, a few at most: a rule that skips everything
-            // shouldn't walk the whole book.
-            repeat(MAX_SKIPPED_CHAPTERS + 1) {
-                val text = fetchWithRetries(next.id) ?: return@launch appendNotice(FETCH_FAILED)
-                if (text.sentences.indices.any { it !in text.skipped }) {
-                    return@launch appendChapter(library.chapter(next.id) ?: return@launch, text)
-                }
-                EventLog.log("NEXT", "chapter ${next.id} is all skipped, moving on")
-                next = library.nextChapter(next.id) ?: return@launch appendNotice(NO_MORE_CHAPTERS)
+            if (appendNext(chapter)) fetchAhead(chapter)
+        }
+    }
+
+    /** Appends the chapter after [chapter], or a notice. Returns whether a chapter is next in the playlist. */
+    private suspend fun appendNext(chapter: Chapter): Boolean {
+        var next = library.nextChapter(chapter.id) ?: return false.also { appendNotice(NO_MORE_CHAPTERS) }
+        if (next.id in appended) return true
+        // A chapter whose every sentence is skipped is passed over, a few at most: a rule that skips everything
+        // shouldn't walk the whole book.
+        repeat(MAX_SKIPPED_CHAPTERS + 1) {
+            val text = fetchWithRetries(next.id) ?: return false.also { appendNotice(FETCH_FAILED) }
+            if (text.sentences.indices.any { it !in text.skipped }) {
+                appendChapter(library.chapter(next.id) ?: return false, text)
+                return true
             }
-            appendNotice(NOTHING_TO_READ)
+            EventLog.log("NEXT", "chapter ${next.id} is all skipped, moving on")
+            next = library.nextChapter(next.id) ?: return false.also { appendNotice(NO_MORE_CHAPTERS) }
+        }
+        appendNotice(NOTHING_TO_READ)
+        return false
+    }
+
+    /**
+     * Fetches the text of the chapters after the next one, up to [ReadAhead.CHAPTERS_AHEAD] past [chapter], in order.
+     * Stops at the first failure: the generator stops at the first chapter without text anyway, and the next chapter
+     * start tries again.
+     */
+    private suspend fun fetchAhead(chapter: Chapter) {
+        for (c in library.chaptersFrom(chapter.id, 1 + ReadAhead.CHAPTERS_AHEAD).drop(2)) {
+            if (c.textHash != null) continue
+            try {
+                library.chapterText(c.id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                EventLog.log("AHEAD", "fetch of chapter ${c.id} failed: $e")
+                return
+            }
+            EventLog.log("AHEAD", "fetched chapter ${c.id}")
+            generator.textArrived()
         }
     }
 
@@ -473,6 +505,7 @@ class PlaybackService : MediaSessionService() {
         }
 
         override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            SpeechWork.listening.value = playWhenReady
             when {
                 playWhenReady -> armChapterEnd()
                 reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM -> onSleepPause()
