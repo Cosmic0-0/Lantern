@@ -7,6 +7,7 @@ import app.lantern.library.Library
 import app.lantern.library.SourcesChapterSource
 import app.lantern.sources.Sources
 import app.lantern.prepare.PreparedAudio
+import app.lantern.speech.Heat
 import app.lantern.speech.Phonon
 import app.lantern.speech.SentenceAudio
 import java.io.File
@@ -18,6 +19,7 @@ class LanternApp : Application() {
     val settings by lazy { Settings(this) }
     val audio by lazy { SentenceAudio(File(cacheDir, "audio")) }
     val prepared by lazy { PreparedAudio(library, audio) }
+    val heat by lazy { Heat(this) }
 
     override fun onCreate() {
         super.onCreate()

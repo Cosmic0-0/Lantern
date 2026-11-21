@@ -5,18 +5,24 @@ import kotlin.test.assertEquals
 
 class HeatGuardTest {
     @Test
-    fun `pauses at 40 and resumes only at 37 or below`() {
+    fun `hot from moderate until back to light`() {
         val guard = HeatGuard()
-        val temps = listOf(30f, 39.9f, 40f, 39f, 37.1f, 37f, 38f, 39.9f, 41f)
-        val paused = listOf(false, false, true, true, true, false, false, false, true)
-        assertEquals(paused, temps.map(guard::update))
+        val statuses = listOf(0, 1, 2, 3, 2, 1, 0, 1, 4)
+        val hot = listOf(false, false, true, true, true, false, false, false, true)
+        assertEquals(hot, statuses.map(guard::update))
     }
 
     @Test
-    fun `an unknown temperature changes nothing`() {
+    fun `the gap holds until the status falls far enough`() {
+        val guard = HeatGuard(pauseAt = 3, resumeAt = 1)
+        assertEquals(listOf(false, true, true, false), listOf(2, 3, 2, 1).map(guard::update))
+    }
+
+    @Test
+    fun `an unknown status changes nothing`() {
         val guard = HeatGuard()
         assertEquals(false, guard.update(null))
-        guard.update(45f)
+        guard.update(3)
         assertEquals(true, guard.update(null))
     }
 }

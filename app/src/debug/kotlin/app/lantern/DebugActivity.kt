@@ -82,7 +82,7 @@ class DebugActivity : ComponentActivity() {
 
         val audio = SentenceAudio(File(cacheDir, "audio"))
         start = System.nanoTime()
-        val gen = Generator(library, audio, { modelDir }, voice) { Log.i(TAG, it) }.also { generator = it }
+        val gen = Generator(library, audio, { modelDir }, voice, isHot = { false }) { Log.i(TAG, it) }.also { generator = it }
         gen.update(Position(bookId, chapter.id, 0))
         while (true) {
             val ready = sentences.indices.count { audio.isReady(voice, hash, it) }

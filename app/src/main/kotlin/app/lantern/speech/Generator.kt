@@ -30,6 +30,9 @@ import kotlin.concurrent.withLock
  * as ready and is never made, a sentence is spoken through [SpeechRules.spoken], and a chapter's audio lives under
  * [SpeechRules.audioKey] instead of its bare text hash. Phrases arrive already spoken from the playback service.
  *
+ * While the phone is hot ([isHot]) it holds back: with playback paused it makes nothing, and while you listen it
+ * makes only the playing chapter and the next, as much as playback needs (docs/decisions/prepared-audio.md).
+ *
  * Must run inside the foreground playback service: a background app gets almost no CPU (Spike 1).
  */
 class Generator(
@@ -38,6 +41,8 @@ class Generator(
     /** Called once, on the generator thread, before the model loads: installing it can take a while. */
     private val modelDir: () -> File,
     voice: String,
+    /** Asked before each sentence; see the class comment. */
+    private val isHot: () -> Boolean,
     private val log: (String) -> Unit,
 ) : AutoCloseable {
     /** [chapterId] is -1 for a phrase. [key] is where its audio goes: the chapter's audio key, or the phrase key. */
@@ -66,6 +71,7 @@ class Generator(
     private val ready = HashMap<String, MutableSet<Int>>()
     private var readyVoice: String? = null
     private var readyChapter = -1L
+    private var wasHot = false
 
     private val thread = Thread(::run, "lantern-generator").apply { start() }
 
@@ -157,6 +163,12 @@ class Generator(
         wanted.firstOrNull { !audio.isReady(v, phraseKey(it), 0) }?.let { return Job(-1, 0, phraseKey(it), it) }
 
         val p = playing ?: return null
+        val hot = isHot()
+        if (hot != wasHot) {
+            log(if (hot) "GEN hot: holding back" else "GEN cool: reading ahead again")
+            wasHot = hot
+        }
+        if (hot && !SpeechWork.listening.value) return null
         val current = library.chapter(p.chapterId)?.takeIf { it.textHash != null } ?: return null
         val rules = rulesFor(current.bookId)
         if (v != readyVoice || current.id != readyChapter) {
@@ -165,7 +177,8 @@ class Generator(
             readyChapter = current.id
         }
         // The playing chapter and the ones after it in reach, stopping at the first whose text isn't stored.
-        val window = library.chaptersFrom(current.id, 1 + ReadAhead.CHAPTERS_AHEAD).takeWhile { it.textHash != null }
+        val reach = if (hot) HOT_CHAPTERS_AHEAD else ReadAhead.CHAPTERS_AHEAD
+        val window = library.chaptersFrom(current.id, 1 + reach).takeWhile { it.textHash != null }
         val chapters = window.associate { it.id to speechOf(it, rules) }
         speech.keys.retainAll(chapters.keys)
         wantKept = Keep(v, current.id, wanted.map(::phraseKey), rulesVersion)
@@ -244,6 +257,9 @@ class Generator(
     companion object {
         /** How long an idle generator sleeps before looking again. Every change that could give it work wakes it. */
         private const val IDLE_WAIT_S = 10L
+
+        /** Chapters made past the playing one while the phone is hot: enough that the next chapter starts without a gap. */
+        private const val HOT_CHAPTERS_AHEAD = 1
 
         /** Where a phrase's audio lives: SentenceAudio file 0 under this key, in place of a chapter's text hash. */
         fun phraseKey(text: String): String =

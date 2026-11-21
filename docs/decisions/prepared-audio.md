@@ -11,7 +11,7 @@ Decided with you in chat on 2026-11-20. It reverses [phone precompute: dropped](
 - **Read-ahead while listening is 5 chapters,** up from 1. Playback fetches text and makes audio up to 5 chapters past the playing one, then waits. Finishing a chapter opens room for one more.
 - **One kind of making at a time.** Preparing waits while you listen, since listening makes its own audio, and carries on when you stop. Every sentence is made under one shared lock, so the two never run the engine at once.
 - **Audio is kept until you pass it.** Audio is kept for every chapter from each book's position onward, in the current voice. Chapters behind your position, other voices and unused phrases are deleted. Before, only the current and next chapter were kept.
-- **Heat guard.** Preparing pauses at 40 °C battery temperature and carries on at 37 °C or below.
+- **Heat guard.** Changed on 2026-11-21: it reads Android's thermal status instead of the battery temperature. Making holds back from "moderate" until the status is back to "light" or below. While it holds back, preparing pauses, and playback's read-ahead makes nothing while playback is paused and only the playing chapter and the next one while you listen, so playback never stalls. The first version paused at 40 °C battery and carried on at 37 °C; see below for why it was replaced.
 - **A foreground job with a notification** that shows progress and has a Cancel button, run by WorkManager. A background app gets almost no CPU on the A26 (Spike 1). It uses the `specialUse` service type, because `dataSync` and `mediaProcessing` stop after 6 hours a day on Android 15 and later, less than one night.
 - **Changing voice asks first.** It deletes prepared audio, so a pop-up says how many chapters and how much space would be lost, and needs a ticked "I understand" before it changes.
 - **WAV stays,** about 47 MB per 16-minute chapter. The rest of Ode of the Brave is about 4.2 GB, with 47 GB free on 2026-11-20. Compressed audio would be about 10 times smaller, but is left for later.
@@ -21,3 +21,9 @@ Decided with you in chat on 2026-11-20. It reverses [phone precompute: dropped](
 
 - The laptop made one 5.6 s sentence at RTF 0.21 with 4 threads and 0.17 with 8. Each run also loads the model, which takes about 0.4 s. Its WAV is 16-bit 24 kHz mono, the same as the phone's.
 - Ode of the Brave: chapters average about 280 sentences, 16 minutes of audio and 47 MB.
+
+## Overnight run, 2026-11-20 to 21
+
+- The phone prepared chapters 15 to 19, then the heat guard paused at 00:25 (40 °C) and never resumed. On the charger the battery stayed at 40 to 41 °C until full at 03:48, then about 39 °C with nothing running, so 37 °C was never reached. Android's thermal status was "light" at that point. That is why the guard now uses the thermal status.
+- Playback's read-ahead ignored the guard and made chapter 20 after the pause, which is why read-ahead now obeys it too.
+- The laptop made chapters 46 to 50 and 84 to 112 (about 100 s per chapter) before Claude Code stopped it for low memory at 01:20. No sentence failed on either side.

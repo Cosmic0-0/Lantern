@@ -3,10 +3,7 @@ package app.lantern.prepare
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ServiceInfo
-import android.os.BatteryManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
@@ -15,7 +12,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import app.lantern.EventLog
-import app.lantern.core.HeatGuard
 import app.lantern.lantern
 import app.lantern.library.Chapter
 import app.lantern.model.ModelInstaller
@@ -34,14 +30,14 @@ import kotlin.concurrent.withLock
  * in the range, then makes their audio in order from the book's position, into the cache playback reads.
  *
  * Runs in the foreground with a notification, since a background app gets almost no CPU (Spike 1). Waits while you
- * listen (playback makes its own audio then) and while the battery is hot. Every sentence is made under
+ * listen (playback makes its own audio then) and while the phone is hot ([app.lantern.speech.Heat]). Every sentence is made under
  * [SpeechWork.lock] and checked on disk first, so a stopped job carries on where it was and never repeats work.
  */
 class PrepareWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     private val app = context.lantern
     private val library = app.library
     private val audio = app.audio
-    private val heat = HeatGuard()
+    private val heat = app.heat
     private var title = ""
     private var tts: PhononTTS? = null
 
@@ -124,18 +120,17 @@ class PrepareWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         return true
     }
 
-    /** Waits while you listen or the battery is hot, saying so in the notification. */
+    /** Waits while you listen or the phone is hot, saying so in the notification. */
     private suspend fun waitUntilFree(done: Int, total: Int) {
         var said: String? = null
         while (true) {
-            val celsius = batteryCelsius()
             val why = when {
                 SpeechWork.listening.value -> "Paused while you listen"
-                heat.update(celsius) -> "Paused: phone is hot (${"%.0f".format(Locale.ROOT, celsius)} °C)"
+                heat.isHot() -> "Paused: phone is hot"
                 else -> null
             }
             if (why != said) {
-                log(why ?: "carrying on")
+                log("${why ?: "carrying on"} thermal=${heat.status()} temp=${heat.batteryCelsius()}")
                 report(PrepareState.Stage.MAKING, done, total, why)
                 said = why
             }
@@ -157,14 +152,8 @@ class PrepareWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         log(
             "chapter=$chapterId sentence=$index wall_ms=${"%.0f".format(Locale.ROOT, wallMs)} " +
                 "audio_ms=${"%.0f".format(Locale.ROOT, audioMs)} rtf=${"%.3f".format(Locale.ROOT, wallMs / audioMs)} " +
-                "temp=${batteryCelsius()}",
+                "thermal=${heat.status()} temp=${heat.batteryCelsius()}",
         )
-    }
-
-    private fun batteryCelsius(): Float? {
-        val battery = applicationContext.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return null
-        val tenths = battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
-        return if (tenths == Int.MIN_VALUE) null else tenths / 10f
     }
 
     private suspend fun report(stage: PrepareState.Stage, done: Int, total: Int, waiting: String?) {

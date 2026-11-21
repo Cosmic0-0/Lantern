@@ -95,7 +95,7 @@ class PlaybackService : MediaSessionService() {
         player.setPlaybackSpeed(settings.speed)
         player.addListener(PlayerListener())
         session = MediaSession.Builder(this, player).setCallback(SessionCallback()).build()
-        generator = Generator(library, audio, { ModelInstaller.ensureInstalled(this) }, settings.voice) {
+        generator = Generator(library, audio, { ModelInstaller.ensureInstalled(this) }, settings.voice, lantern.heat::isHot) {
             EventLog.log("SPEECH", it)
         }
     }
