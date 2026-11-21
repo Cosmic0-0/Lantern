@@ -20,15 +20,21 @@ internal interface LibraryDao {
     suspend fun bookCount(): Int
 
     @Query(
-        """SELECT id, title, sourceId, coverUrl, lastPlayedAt,
-                  (SELECT COUNT(*) FROM chapter WHERE chapter.bookId = book.id) AS chapterCount
+        """SELECT id, title, sourceId, coverUrl, lastPlayedAt, addedAt,
+                  (SELECT COUNT(*) FROM chapter WHERE chapter.bookId = book.id) AS chapterCount,
+                  (SELECT c.title FROM position p JOIN chapter c ON c.id = p.chapterId WHERE p.bookId = book.id) AS atTitle,
+                  (SELECT COUNT(*) FROM chapter c WHERE c.bookId = book.id AND c.number <
+                      (SELECT pc.number FROM position p JOIN chapter pc ON pc.id = p.chapterId WHERE p.bookId = book.id)) AS chaptersBefore
            FROM book ORDER BY lastPlayedAt DESC, addedAt DESC, id DESC""",
     )
     fun books(): Flow<List<Book>>
 
     @Query(
-        """SELECT id, title, sourceId, coverUrl, lastPlayedAt,
-                  (SELECT COUNT(*) FROM chapter WHERE chapter.bookId = book.id) AS chapterCount
+        """SELECT id, title, sourceId, coverUrl, lastPlayedAt, addedAt,
+                  (SELECT COUNT(*) FROM chapter WHERE chapter.bookId = book.id) AS chapterCount,
+                  (SELECT c.title FROM position p JOIN chapter c ON c.id = p.chapterId WHERE p.bookId = book.id) AS atTitle,
+                  (SELECT COUNT(*) FROM chapter c WHERE c.bookId = book.id AND c.number <
+                      (SELECT pc.number FROM position p JOIN chapter pc ON pc.id = p.chapterId WHERE p.bookId = book.id)) AS chaptersBefore
            FROM book WHERE id = :id""",
     )
     suspend fun bookSummary(id: Long): Book?

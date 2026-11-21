@@ -8,7 +8,9 @@ Decided with you in chat on 2026-11-21. Lantern's screens are redesigned after t
 - **Two reds.** The brand red reads at 4.1:1 as text on the dark ground, below the 4.5:1 that small text needs, and no red passes both as text there and under white text. So the brand red fills buttons and the + button, with white text on it (4.5:1), and a lighter red (#FF5A4E, 6.1:1) is used for red text, icons and selection.
 - **Type.** Headings and titles use Schibsted Grotesk, a sturdy newspaper grotesk, bundled in the app (SIL Open Font License, copy in `third-party/fonts/`). Body text and labels stay in the phone's own Roboto.
 - **No bottom navigation bar.** With search moving into the + sheet, only Library and Settings would be left, and Material asks for 3 to 5 tabs. Settings is an icon in the top bar.
-- **Covers are shown,** downloaded once from the address each book already stores. Pasted texts get a lettered tile.
+- **Covers are shown,** downloaded once from the address each book already stores, into the app's cache, and decoded at tile size. About 100 lines of the phone's own HTTP and image code do this instead of the Coil library agreed in chat: a library of a few books needs no more, and it adds no dependency. Pasted texts, and covers that fail to download, get the book's first letter on a dark red tile.
+- **Icons** are Material Symbols Rounded, copied in as Android vector drawables (Apache License 2.0), rather than an icon library.
+- **The home screen's play button plays the book without opening the reader.** Tapping the rest of the card opens the reader without starting playback. Before, Continue did both.
 - **Left out from the reference:** the daily reading goal, favourites (a database change), justified text and page mode (both need paragraphs, and Lantern stores one sentence per row).
 - **Play stays one tap away in the reader,** in the middle of the bottom bar. The reference hides it in its Listen sheet; Lantern is listened to more than read.
 

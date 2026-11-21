@@ -30,7 +30,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** [chapterCount] and the other fields are exactly the columns `LibraryDao.books` selects. */
+/**
+ * [chapterCount] and the other fields are exactly the columns `LibraryDao.books` selects. [atTitle] is the title of the
+ * chapter your saved position is in, and [chaptersBefore] how many chapters come before it: both are null and 0 for a
+ * book with no position yet.
+ */
 data class Book(
     val id: Long,
     val title: String,
@@ -38,7 +42,13 @@ data class Book(
     val coverUrl: String?,
     val chapterCount: Int,
     val lastPlayedAt: Long?,
-)
+    val addedAt: Long,
+    val atTitle: String?,
+    val chaptersBefore: Int,
+) {
+    /** How far through the book your place is, by chapters, from 0 to 1. */
+    val progress: Float get() = if (chapterCount == 0) 0f else chaptersBefore.toFloat() / chapterCount
+}
 
 /** [textHash] is null until the chapter's text has been fetched. */
 data class Chapter(val id: Long, val bookId: Long, val number: Int, val title: String, val textHash: String?)

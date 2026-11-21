@@ -10,6 +10,7 @@ import app.lantern.prepare.PreparedAudio
 import app.lantern.speech.Heat
 import app.lantern.speech.Phonon
 import app.lantern.speech.SentenceAudio
+import app.lantern.ui.Covers
 import java.io.File
 
 /** The one copy of the things screens and the playback service share. No DI framework: these few are enough. */
@@ -20,6 +21,7 @@ class LanternApp : Application() {
     val audio by lazy { SentenceAudio(File(cacheDir, "audio")) }
     val prepared by lazy { PreparedAudio(library, audio) }
     val heat by lazy { Heat(this) }
+    val covers by lazy { Covers(File(cacheDir, "covers")) }
 
     override fun onCreate() {
         super.onCreate()
@@ -29,7 +31,7 @@ class LanternApp : Application() {
 
 val Context.lantern: LanternApp get() = applicationContext as LanternApp
 
-/** Voice and speed, one setting each for all books (docs/decisions/mvp-assumptions.md). */
+/** Voice and speed, one setting each for all books (docs/decisions/mvp-assumptions.md), and how the library is shown. */
 class Settings(context: Context) {
     private val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
 
@@ -45,4 +47,23 @@ class Settings(context: Context) {
         set(value) {
             prefs.edit().putFloat("speed", value).apply()
         }
+
+    /** The library's order: one of [LIBRARY_SORTS]. */
+    var librarySort: String
+        get() = prefs.getString("library_sort", null)?.takeIf { it in LIBRARY_SORTS } ?: LIBRARY_SORTS.first()
+        set(value) {
+            require(value in LIBRARY_SORTS)
+            prefs.edit().putString("library_sort", value).apply()
+        }
+
+    /** Covers in a grid, or a list. */
+    var libraryGrid: Boolean
+        get() = prefs.getBoolean("library_grid", true)
+        set(value) {
+            prefs.edit().putBoolean("library_grid", value).apply()
+        }
+
+    companion object {
+        val LIBRARY_SORTS = listOf("recent", "title", "added")
+    }
 }

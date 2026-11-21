@@ -84,11 +84,24 @@ class LibraryTest {
         val id = library.add(listing)
 
         val book = library.books().first().single()
-        assertEquals(Book(id, "Book A", "src", "http://img/a.jpg", 3, null), book)
+        assertEquals(Book(id, "Book A", "src", "http://img/a.jpg", 3, null, book.addedAt, atTitle = null, chaptersBefore = 0), book)
         val chapters = chaptersOf(id)
         assertEquals(listOf("One", "Two", "Three"), chapters.map { it.title })
         assertEquals(listOf(0, 1, 2), chapters.map { it.number })
         assertTrue(chapters.all { it.bookId == id && it.textHash == null })
+    }
+
+    @Test
+    fun aBookSaysWhichChapterItsPlaceIsInAndHowFarThrough() = runBlocking {
+        val id = library.add(listing)
+        val two = chaptersOf(id)[1]
+
+        library.savePosition(Position(id, two.id, 5))
+
+        val book = library.books().first().single()
+        assertEquals("Two", book.atTitle)
+        assertEquals(1, book.chaptersBefore)
+        assertEquals(1f / 3, book.progress)
     }
 
     @Test
