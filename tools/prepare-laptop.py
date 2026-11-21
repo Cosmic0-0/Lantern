@@ -5,14 +5,15 @@ audio ahead of your position, or the app deletes what this pushes after one chap
 
     python -I tools/prepare-laptop.py [--book ID] [--workers 4] [--threads 4]
 
-- Reads the library from the phone over adb (run-as, so a debug build) and the voice from the app's settings.
+- The phone must be plugged in at the start: it reads the library over adb (run-as, so a debug build), the voice from
+  the app's settings, and which audio the phone already has. After that the phone can be unplugged until the end.
 - Works from the last chapter backwards towards your position, so it meets the phone's own prepare job (which goes
-  forwards) in the middle. Chapters whose text the phone hasn't fetched yet are waited for: it reads the library
-  again every minute until every chapter from your position on has text and audio.
+  forwards) in the middle. Chapters the phone hasn't fetched text for are left to the phone: the laptop can't fetch.
 - Makes each missing sentence with ptts.exe v0.6.0 (same model, q8 and voice file as the phone), several at once.
 - Pushes each finished chapter into cache/audio/<voice>/<text hash>/ on the phone, a file at a time through a
-  temporary name, so the app never sees half a file. If the phone is unplugged, it keeps making audio and pushes
-  when it's back. Running it again skips everything already made, here or on the phone.
+  temporary name, so the app never sees half a file. Chapters made while the phone is unplugged are pushed when it is
+  back; once everything is made it waits for the phone and pushes the rest. Running it again skips everything already
+  made, here or on the phone.
 - Keeps the laptop from sleeping while it runs, without changing power settings. Closing the lid may still sleep it.
 - Refuses a book with skip rules or pronunciation fixes: those change what is said and where audio is stored.
 """
@@ -137,16 +138,19 @@ def keep_awake():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--book", type=int, help="book id; defaults to the last one played")
-    ap.add_argument("--workers", type=int, default=4, help="sentences made at once")
+    ap.add_argument("--workers", type=int, default=2, help="sentences made at once")
     ap.add_argument("--threads", type=int, default=4, help="CPU threads per sentence")
     args = ap.parse_args()
 
     if not PTTS.is_file():
         sys.exit(f"ptts.exe not found at {PTTS}")
+    if not phone_connected():
+        sys.exit("plug the phone in first: the library and voice are read from it")
     props = local_properties()
     model = props["lantern.modelDir"]
     keep_awake()
 
+    # Everything needed from the phone, read once, so it can be unplugged from here on.
     db = pull_library()
     voice = phone_voice()
     voice_file = str(Path(props["lantern.voicesDir"]) / f"{VOICE_FILES[voice]}.safetensors")
@@ -155,50 +159,51 @@ def main():
     rules = db.execute("SELECT COUNT(*) FROM rule WHERE bookId = ? OR bookId IS NULL", (book_id,)).fetchone()[0]
     if rules:
         sys.exit(f"{title} has {rules} skip rules or fixes; this script only handles books without any.")
-    log(f"book {book_id} '{title}', voice {voice}, {args.workers} at once x {args.threads} threads")
-
-    done = set()  # chapter ids finished and on the phone
-    pool = concurrent.futures.ThreadPoolExecutor(args.workers)
-    while True:
-        try:
-            db = step(args, model, voice, voice_file, book_id, db, done, pool)
-        except Finished:
-            return
-        except Exception as e:
-            # A dropped USB link or a busy phone shouldn't end a night's run: wait, read the library again, go on.
-            log(f"error: {e!r}; trying again in a minute")
-            time.sleep(60)
-            try:
-                db.close()
-                db = pull_library()
-            except Exception as e2:
-                log(f"  library not readable yet: {e2!r}")
-
-
-class Finished(Exception):
-    pass
-
-
-def step(args, model, voice, voice_file, book_id, db, done, pool):
-    """One chapter, or one wait for text. Returns the library connection to use next."""
     chapters = chapters_ahead(db, book_id)
-    todo = [c for c in reversed(chapters) if c[2] and c[0] not in done]
-    waiting = [c for c in chapters if not c[2]]
-    if not todo:
-        if not waiting:
-            log(f"all {len(chapters)} chapters from your position are done")
-            raise Finished
-        log(f"{len(waiting)} chapters have no text on the phone yet; looking again in a minute")
-        time.sleep(60)
-        db.close()  # the copy is overwritten, and Windows won't overwrite an open file
-        return pull_library()
+    no_text = [number + 1 for _, number, key in chapters if not key]
+    todo = []  # (number, key, sentences), last chapter first
+    for chapter_id, number, key in reversed(chapters):
+        if key:
+            sentences = db.execute("SELECT idx, text FROM sentence WHERE chapterId = ? ORDER BY idx", (chapter_id,)).fetchall()
+            todo.append((number, key, sentences, phone_ready(voice, key)))
+    db.close()
+    log(f"book {book_id} '{title}', voice {voice}, {args.workers} at once x {args.threads} threads, "
+        f"{len(todo)} chapters from your position")
+    if no_text:
+        log(f"  left to the phone, no text fetched yet: chapters {no_text}")
 
-    chapter_id, number, key = todo[0]
-    sentences = db.execute("SELECT idx, text FROM sentence WHERE chapterId = ? ORDER BY idx", (chapter_id,)).fetchall()
+    pool = concurrent.futures.ThreadPoolExecutor(args.workers)
+    unpushed = []  # (number, key, folder, sentence indexes) made here but not on the phone yet
+    for number, key, sentences, on_phone in todo:
+        if phone_connected():
+            try:
+                on_phone = phone_ready(voice, key)  # the phone's own job may have made it meanwhile
+            except Exception as e:
+                log(f"  couldn't read the phone's audio for chapter {number + 1}: {e!r}")
+        folder = make_chapter(args, model, voice, voice_file, pool, number, key, sentences, on_phone)
+        new = {int(p.stem) for p in folder.glob("*.wav") if p.stem.isdigit()} - on_phone
+        if new:
+            unpushed.append((number, key, folder, new))
+        unpushed = push_all(voice, unpushed)
+
+    log("all chapters made")
+    while unpushed:
+        log(f"{len(unpushed)} chapters to push; waiting for the phone")
+        while not phone_connected():
+            time.sleep(30)
+        unpushed = push_all(voice, unpushed)
+        if unpushed:
+            time.sleep(60)
+    log("done: everything is on the phone")
+
+
+def make_chapter(args, model, voice, voice_file, pool, number, key, sentences, on_phone):
+    """Makes the chapter's sentences that are neither on the phone nor made here. Returns its folder."""
     folder = WORK / "audio" / voice / key
     folder.mkdir(parents=True, exist_ok=True)
-    on_phone = phone_ready(voice, key) if phone_connected() else set()
     missing = [(i, t) for i, t in sentences if i not in on_phone and not (folder / f"{i}.wav").is_file()]
+    if not missing:
+        return folder
     start = time.time()
     jobs = {pool.submit(make_sentence, model, voice_file, args.threads, t, folder / f"{i}.wav"): i for i, t in missing}
     failed = 0
@@ -208,25 +213,28 @@ def step(args, model, voice, voice_file, book_id, db, done, pool):
         except Exception as e:
             failed += 1
             log(f"chapter {number + 1} sentence {jobs[job]} failed: {e}")
-    made_s = time.time() - start
-    log(f"chapter {number + 1}: made {len(missing) - failed} of {len(sentences)} sentences in {made_s:.0f} s"
+    log(f"chapter {number + 1}: made {len(missing) - failed} of {len(sentences)} sentences in {time.time() - start:.0f} s"
         f" ({len(on_phone)} already on the phone)")
     if failed:
         log("  failed sentences are left for the phone to make")
+    return folder
 
-    local = {int(p.stem) for p in folder.glob("*.wav") if p.stem.isdigit()}
-    to_push = local - on_phone
-    while to_push and not phone_connected():
-        log("phone not connected; waiting to push")
-        time.sleep(60)
-    if to_push:
-        push_chapter(voice, key, folder, to_push)
-        log(f"  pushed {len(to_push)} files")
-    done.add(chapter_id)
-    if len(done) % 5 == 0:
-        db.close()
-        return pull_library()  # pick up text the phone fetched meanwhile
-    return db
+
+def push_all(voice, unpushed):
+    """Pushes what it can while the phone is connected. Returns the chapters still to push."""
+    left = []
+    for item in unpushed:
+        number, key, folder, indexes = item
+        if not phone_connected():
+            left.append(item)
+            continue
+        try:
+            push_chapter(voice, key, folder, indexes)
+            log(f"  pushed chapter {number + 1} ({len(indexes)} files)")
+        except Exception as e:
+            log(f"  push of chapter {number + 1} failed, will try again: {e!r}")
+            left.append(item)
+    return left
 
 
 if __name__ == "__main__":
