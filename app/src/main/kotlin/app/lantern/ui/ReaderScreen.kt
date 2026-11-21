@@ -61,6 +61,7 @@ import app.lantern.core.Sentence
 import app.lantern.lantern
 import app.lantern.library.Chapter
 import app.lantern.playback.Commands
+import app.lantern.ui.theme.redButtonColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -448,7 +449,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text("Couldn't load this chapter: ${state.message}", color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { attempt += 1 }, Modifier.padding(top = 12.dp)) { Text("Retry") }
+                    Button(onClick = { attempt += 1 }, Modifier.padding(top = 12.dp), colors = redButtonColors()) { Text("Retry") }
                 }
                 is Load.Ready -> key(state) {
                     ReaderContent(
@@ -510,7 +511,7 @@ private fun ReaderControls(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = { onPrevious?.invoke() }, enabled = onPrevious != null) { Text("‹ Chapter") }
-                Button(onClick = onPlayPause, enabled = canPlay) { Text(if (speaking) "Pause" else "Play") }
+                Button(onClick = onPlayPause, enabled = canPlay, colors = redButtonColors()) { Text(if (speaking) "Pause" else "Play") }
                 OutlinedButton(onClick = { onNext?.invoke() }, enabled = onNext != null) { Text("Chapter ›") }
             }
         }

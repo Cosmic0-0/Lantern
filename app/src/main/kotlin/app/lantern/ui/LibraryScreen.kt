@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import app.lantern.lantern
 import app.lantern.library.Book
 import app.lantern.playback.Commands
+import app.lantern.ui.theme.redButtonColors
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -64,6 +65,7 @@ fun LibraryScreen(nav: Nav) {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = padding) {
                     if (last != null) item {
                         Button(
+                            colors = redButtonColors(),
                             onClick = {
                                 voiceCheck.start({ library.lastPlayed() }) { Commands.continueBook(it, null) }
                                 scope.launch { nav.openReader(library, last.id) }

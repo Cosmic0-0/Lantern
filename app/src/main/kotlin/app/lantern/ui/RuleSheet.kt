@@ -33,6 +33,7 @@ import app.lantern.core.Sentence
 import app.lantern.core.SkipRule
 import app.lantern.core.SpeechRules
 import app.lantern.library.RuleKind
+import app.lantern.ui.theme.redButtonColors
 import kotlin.math.abs
 
 /** Tags of the sheet's two text fields that tests type into. */
@@ -182,7 +183,7 @@ fun RuleSheetContent(
             )
         }
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        Button(onClick = { onSave(draft) }, enabled = complete && !saving, modifier = Modifier.fillMaxWidth()) { Text("Save") }
+        Button(onClick = { onSave(draft) }, enabled = complete && !saving, modifier = Modifier.fillMaxWidth(), colors = redButtonColors()) { Text("Save") }
     }
 }
 

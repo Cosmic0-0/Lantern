@@ -46,6 +46,7 @@ import app.lantern.prepare.Prepare
 import app.lantern.prepare.PrepareState
 import app.lantern.prepare.PreparedAudio.BookAudio
 import app.lantern.speech.Phonon
+import app.lantern.ui.theme.redButtonColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -134,6 +135,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
                     Column(Modifier.fillMaxWidth().padding(16.dp)) {
                         Text("${sourceName(book?.sourceId)} · ${chaptersText(chapters.size)}", style = MaterialTheme.typography.bodyMedium)
                         Button(
+                            colors = redButtonColors(),
                             onClick = {
                                 voiceCheck.start({ library.startOf(bookId) }) { Commands.continueBook(it, bookId) }
                                 scope.launch { nav.openReader(library, bookId) }

@@ -35,6 +35,7 @@ import app.lantern.lantern
 import app.lantern.library.Book
 import app.lantern.library.SwitchPreview
 import app.lantern.sources.Sources
+import app.lantern.ui.theme.redButtonColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -184,7 +185,7 @@ private fun PreviewPanel(preview: SwitchPreview, enabled: Boolean, onSwitch: () 
             Text("You're at ${preview.positionFrom}. After the switch: ${preview.positionTo}.", fontWeight = FontWeight.SemiBold)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
-            Button(onClick = onSwitch, enabled = enabled) { Text("Switch") }
+            Button(onClick = onSwitch, enabled = enabled, colors = redButtonColors()) { Text("Switch") }
             OutlinedButton(onClick = onBack, enabled = enabled) { Text("Back") }
         }
     }

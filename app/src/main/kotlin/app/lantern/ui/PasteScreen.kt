@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import app.lantern.lantern
+import app.lantern.ui.theme.redButtonColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -47,6 +48,7 @@ fun PasteScreen(nav: Nav) {
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp)) }
             Button(
+                colors = redButtonColors(),
                 onClick = {
                     saving = true
                     scope.launch {
