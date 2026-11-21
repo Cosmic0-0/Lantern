@@ -11,6 +11,7 @@ Decided with you in chat on 2026-11-21. Lantern's screens are redesigned after t
 - **Covers are shown,** downloaded once from the address each book already stores, into the app's cache, and decoded at tile size. About 100 lines of the phone's own HTTP and image code do this instead of the Coil library agreed in chat: a library of a few books needs no more, and it adds no dependency. Pasted texts, and covers that fail to download, get the book's first letter on a dark red tile.
 - **Icons** are Material Symbols Rounded, copied in as Android vector drawables (Apache License 2.0), rather than an icon library.
 - **The home screen's play button plays the book without opening the reader.** Tapping the rest of the card opens the reader without starting playback. Before, Continue did both.
+- **The + button opens a sheet** with title search across the three sites and a Paste text row. Search results show each novel's cover with one button per site it is on. The separate Search screen is gone; Paste text keeps its own screen, since it needs room to type.
 - **Left out from the reference:** the daily reading goal, favourites (a database change), justified text and page mode (both need paragraphs, and Lantern stores one sentence per row).
 - **Play stays one tap away in the reader,** in the middle of the bottom bar. The reference hides it in its Listen sheet; Lantern is listened to more than read.
 

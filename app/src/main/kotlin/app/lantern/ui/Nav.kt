@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.first
 /** Where you are in the app. [Reader]'s chapter is the one it opens on; the reader can move on from there. */
 sealed interface Screen {
     data object Library : Screen
-    data object Search : Screen
     data class Book(val bookId: Long) : Screen
     data class Reader(val bookId: Long, val chapterId: Long) : Screen
     data object Settings : Screen
@@ -38,7 +37,6 @@ sealed interface Screen {
 
 private fun Screen.encode(): String = when (this) {
     Screen.Library -> "library"
-    Screen.Search -> "search"
     is Screen.Book -> "book:$bookId"
     is Screen.Reader -> "reader:$bookId:$chapterId"
     Screen.Settings -> "settings"
@@ -50,7 +48,6 @@ private fun Screen.encode(): String = when (this) {
 private fun decodeScreen(text: String): Screen {
     val parts = text.split(':')
     return when (parts[0]) {
-        "search" -> Screen.Search
         "book" -> Screen.Book(parts[1].toLong())
         "reader" -> Screen.Reader(parts[1].toLong(), parts[2].toLong())
         "settings" -> Screen.Settings
@@ -106,7 +103,6 @@ fun LanternRoot() {
         key(nav.current) {
             when (val screen = nav.current) {
                 Screen.Library -> LibraryScreen(nav)
-                Screen.Search -> SearchScreen(nav)
                 is Screen.Book -> BookScreen(nav, screen.bookId)
                 is Screen.Reader -> ReaderScreen(nav, screen.bookId, screen.chapterId)
                 Screen.Settings -> SettingsScreen(nav)

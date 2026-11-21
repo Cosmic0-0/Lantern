@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +86,7 @@ fun LibraryScreen(nav: Nav) {
     var sort by remember { mutableStateOf(settings.librarySort) }
     var grid by remember { mutableStateOf(settings.libraryGrid) }
     var readyOnly by remember { mutableStateOf(false) }
+    var addingBook by rememberSaveable { mutableStateOf(false) }
 
     // Chapters with audio ready, per book, in the current voice. Counted again when the library changes.
     val ready by produceState(emptyMap<Long, Int>(), books) {
@@ -96,7 +98,7 @@ fun LibraryScreen(nav: Nav) {
     Scaffold(
         bottomBar = { MiniPlayer(nav) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { nav.open(Screen.Search) }, shape = CircleShape) {
+            FloatingActionButton(onClick = { addingBook = true }, shape = CircleShape) {
                 Icon(painterResource(R.drawable.ic_add), contentDescription = "Add a book")
             }
         },
@@ -127,10 +129,7 @@ fun LibraryScreen(nav: Nav) {
             verticalArrangement = Arrangement.spacedBy(if (grid) 20.dp else 4.dp),
         ) {
             full {
-                Header(
-                    onPaste = { nav.open(Screen.Paste) },
-                    onSettings = { nav.open(Screen.Settings) },
-                )
+                Header(onSettings = { nav.open(Screen.Settings) })
             }
             if (last != null) full { ContinueCard(nav, last, ready[last.id] ?: 0) }
             if (list.isEmpty()) {
@@ -138,7 +137,7 @@ fun LibraryScreen(nav: Nav) {
                     Column(Modifier.padding(top = 48.dp)) {
                         Text("Your library is empty", style = MaterialTheme.typography.titleLarge)
                         Text(
-                            "Find a novel by its title with the + button, or paste text to listen to.",
+                            "Add a novel with the + button: search by title, or paste text to listen to.",
                             Modifier.padding(top = 8.dp),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -188,6 +187,8 @@ fun LibraryScreen(nav: Nav) {
         }
     }
 
+    if (addingBook) AddSheet(nav, onDismiss = { addingBook = false })
+
     deleting?.let { book ->
         AlertDialog(
             onDismissRequest = { deleting = null },
@@ -220,10 +221,9 @@ fun LibraryScreen(nav: Nav) {
 private fun LazyGridScope.full(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
 @Composable
-private fun Header(onPaste: () -> Unit, onSettings: () -> Unit) {
+private fun Header(onSettings: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(greeting(), Modifier.weight(1f), style = MaterialTheme.typography.displaySmall)
-        IconButton(onClick = onPaste) { Icon(painterResource(R.drawable.ic_content_paste), contentDescription = "Paste text") }
         IconButton(onClick = onSettings) { Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings") }
     }
 }
