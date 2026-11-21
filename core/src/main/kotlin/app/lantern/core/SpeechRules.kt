@@ -33,6 +33,9 @@ class SpeechRules(skips: List<SkipRule>, fixes: List<Fix>) {
         RegexOption.IGNORE_CASE,
     )
 
+    /** Whether any fix can apply. Without one, every chapter's audio key is its bare text hash. */
+    val hasFixes: Boolean get() = matcher != null
+
     /** Indexes into [sentences] of every sentence in a paragraph where any sentence matches a skip rule. */
     fun skipped(sentences: List<Sentence>): Set<Int> {
         if (skipTexts.isEmpty()) return emptySet()

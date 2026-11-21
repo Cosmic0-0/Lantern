@@ -72,8 +72,12 @@ The spoken audio of one sentence in one voice. It can always be made again, so i
 _Avoid_: clip, track, audio file
 
 **Read-ahead**:
-Fetching chapter text and making sentence audio ahead of the position, never past the end of the next chapter.
+Fetching chapter text and making sentence audio ahead of the position while you listen, up to five chapters ahead.
 _Avoid_: prefetch, preload, buffer
+
+**Prepare**:
+Making a chosen run of chapters' sentence audio ahead of time, as a job you start, so listening later needs no making.
+_Avoid_: precompute, download, cache (as a verb)
 
 **Following**:
 The reader scrolling itself to keep the spoken sentence in view. Scrolling by hand stops it until you press "Back to voice".

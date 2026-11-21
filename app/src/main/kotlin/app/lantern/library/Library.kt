@@ -46,6 +46,9 @@ data class Chapter(val id: Long, val bookId: Long, val number: Int, val title: S
 /** A chapter's sentences with their paragraphs, and the indexes of the sentences a skip rule silences. */
 data class ChapterText(val sentences: List<Sentence>, val skipped: Set<Int>)
 
+/** A stored chapter as speech sees it under one book's rules: its sentences, which are skipped, and its audio key. */
+data class ChapterSpeech(val sentences: List<Sentence>, val skipped: Set<Int>, val key: String)
+
 /**
  * The books you added: their chapters, sentences, positions and history. Hides Room, the sources module and
  * [TextPrep]. A chapter's text is fetched once, split once and stored as sentences, so sentence numbers never
@@ -106,6 +109,40 @@ class Library(
 
     /** The chapter after this one in its book, or null at the last chapter. */
     suspend fun nextChapter(chapterId: Long): Chapter? = dao.nextChapter(chapterId)
+
+    /** [chapterId] and the chapters after it in its book, in order, at most [count]. */
+    suspend fun chaptersFrom(chapterId: Long, count: Int): List<Chapter> = dao.chaptersFrom(chapterId, count)
+
+    /** Where [bookId] continues: its saved position, or the start of its first chapter. Null for a book with no chapters. */
+    suspend fun startOf(bookId: Long): Position? =
+        dao.positionOf(bookId) ?: dao.firstChapter(bookId)?.let { Position(bookId, it.id, 0) }
+
+    /**
+     * [chapterId] as speech sees it under [rules], which must be its book's. Reads the database only: throws
+     * [IllegalStateException] if the chapter's text isn't stored.
+     */
+    suspend fun speech(chapterId: Long, rules: SpeechRules): ChapterSpeech {
+        val hash = checkNotNull(dao.chapter(chapterId)?.textHash) { "Chapter $chapterId has no stored text" }
+        val sentences = dao.sentences(chapterId)
+        return ChapterSpeech(sentences, rules.skipped(sentences), rules.audioKey(hash, sentences))
+    }
+
+    /**
+     * The audio keys of every chapter with stored text that isn't behind its book's position, under each book's rules
+     * as they are now (docs/decisions/prepared-audio.md). Audio under any other key is for a chapter already passed,
+     * a deleted book, or old fixes.
+     */
+    suspend fun audioKeysAhead(): Set<String> {
+        val keys = HashSet<String>()
+        for ((bookId, chapters) in dao.storedChaptersAhead().groupBy { it.bookId }) {
+            val rules = rules(bookId)
+            for (c in chapters) {
+                val hash = requireNotNull(c.textHash)
+                keys += if (rules.hasFixes) rules.audioKey(hash, dao.sentences(c.id)) else hash
+            }
+        }
+        return keys
+    }
 
     /**
      * The chapter's sentences with their paragraphs. The first call fetches the text through [ChapterSource],

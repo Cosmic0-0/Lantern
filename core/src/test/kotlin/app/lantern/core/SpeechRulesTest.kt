@@ -273,4 +273,11 @@ class SpeechRulesTest {
     fun `an empty chapter has the plain text hash`() {
         assertEquals("abc", key("Hai" to "High", text = emptyList()))
     }
+
+    @Test
+    fun `hasFixes is true only with a usable fix`() {
+        assertEquals(false, SpeechRules(listOf(SkipRule("ad")), emptyList()).hasFixes)
+        assertEquals(false, SpeechRules(emptyList(), listOf(Fix("  ", "x"))).hasFixes)
+        assertEquals(true, SpeechRules(emptyList(), listOf(Fix("Hai", "High"))).hasFixes)
+    }
 }

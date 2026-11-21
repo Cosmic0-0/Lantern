@@ -70,6 +70,9 @@ Rankings come from the [Artificial Analysis speech arena](https://artificialanal
 
 ## Phone precompute: dropped
 
+**Reversed 2026-11-20:** see [Prepared audio](prepared-audio.md).
+
+
 On 2026-11-08 you asked whether the phone should also precompute batches of chapters. A five-advisor review said no, four to one, and you dropped the idea the same day. The reasons:
 
 - Supertonic at RTF 0.6 already stays ahead of playback. The only gap is the first-audio wait, an estimated 3 to 10 seconds, and generating the next chapter's opening sentences while the current one plays closes it with no job queue.

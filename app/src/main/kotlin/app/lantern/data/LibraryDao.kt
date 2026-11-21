@@ -68,6 +68,25 @@ internal interface LibraryDao {
     )
     suspend fun nextChapter(id: Long): Chapter?
 
+    /** [id] and the chapters after it in its book, in order, at most [count]. */
+    @Query(
+        """SELECT c.id, c.bookId, c.number, c.title, c.textHash
+           FROM chapter AS this JOIN chapter AS c ON c.bookId = this.bookId AND c.number >= this.number
+           WHERE this.id = :id ORDER BY c.number LIMIT :count""",
+    )
+    suspend fun chaptersFrom(id: Long, count: Int): List<Chapter>
+
+    /** Chapters with stored text at or after their book's position, or every one in a book with no position. */
+    @Query(
+        """SELECT c.id, c.bookId, c.number, c.title, c.textHash
+           FROM chapter AS c
+           LEFT JOIN position AS p ON p.bookId = c.bookId
+           LEFT JOIN chapter AS at ON at.id = p.chapterId
+           WHERE c.textHash IS NOT NULL AND c.number >= COALESCE(at.number, -1)
+           ORDER BY c.bookId, c.number""",
+    )
+    suspend fun storedChaptersAhead(): List<Chapter>
+
     @Query("SELECT path FROM chapter WHERE bookId = :bookId AND path IS NOT NULL")
     suspend fun chapterPaths(bookId: Long): List<String>
 
