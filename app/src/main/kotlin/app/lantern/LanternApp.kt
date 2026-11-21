@@ -11,6 +11,11 @@ import app.lantern.speech.Heat
 import app.lantern.speech.Phonon
 import app.lantern.speech.SentenceAudio
 import app.lantern.ui.Covers
+import app.lantern.ui.theme.READER_SIZE_DEFAULT
+import app.lantern.ui.theme.READER_SIZE_MAX
+import app.lantern.ui.theme.READER_SIZE_MIN
+import app.lantern.ui.theme.ReaderFont
+import app.lantern.ui.theme.ReaderTheme
 import java.io.File
 
 /** The one copy of the things screens and the playback service share. No DI framework: these few are enough. */
@@ -61,6 +66,25 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("library_grid", true)
         set(value) {
             prefs.edit().putBoolean("library_grid", value).apply()
+        }
+
+    /** The reader's text size in sp, its font and its theme (app.lantern.ui.theme.ReaderLook). */
+    var readerTextSize: Float
+        get() = prefs.getFloat("reader_text_size", READER_SIZE_DEFAULT)
+        set(value) {
+            prefs.edit().putFloat("reader_text_size", value.coerceIn(READER_SIZE_MIN, READER_SIZE_MAX)).apply()
+        }
+
+    var readerFont: ReaderFont
+        get() = ReaderFont.of(prefs.getString("reader_font", "") ?: "")
+        set(value) {
+            prefs.edit().putString("reader_font", value.id).apply()
+        }
+
+    var readerTheme: ReaderTheme
+        get() = ReaderTheme.of(prefs.getString("reader_theme", "") ?: "")
+        set(value) {
+            prefs.edit().putString("reader_theme", value.id).apply()
         }
 
     companion object {

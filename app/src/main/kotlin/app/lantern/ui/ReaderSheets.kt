@@ -2,6 +2,7 @@ package app.lantern.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -27,16 +30,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -49,6 +58,12 @@ import app.lantern.R
 import app.lantern.lantern
 import app.lantern.library.Chapter
 import app.lantern.playback.Commands
+import app.lantern.speech.Phonon
+import app.lantern.ui.theme.READER_SIZE_MAX
+import app.lantern.ui.theme.READER_SIZE_MIN
+import app.lantern.ui.theme.ReaderFont
+import app.lantern.ui.theme.ReaderTheme
+import kotlin.math.roundToInt
 
 /** Chapters per block in the chapters sheet, as in the reference app. */
 private const val BLOCK = 100
@@ -169,15 +184,49 @@ private fun ChapterRow(chapter: Chapter, read: Boolean, current: Boolean, ready:
 }
 
 /**
- * Listening controls that aren't needed every few seconds: the sleep timer and Undo jump. Voice and speed join them
- * in step 5 of docs/decisions/ui-design.md.
+ * Listening controls that aren't needed every few seconds: voice, speed, the sleep timer and Undo jump. Changing the
+ * voice here works as in Settings: nothing prepared is deleted (docs/decisions/prepared-audio.md).
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ListenSheet(controller: MediaController, sleep: SleepState, canUndo: Boolean, onUndo: () -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+    val app = LocalContext.current.lantern
+    var voice by remember { mutableStateOf(app.settings.voice) }
+    var speed by remember { mutableFloatStateOf(controller.playbackParameters.speed) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
             Text("Listen", style = MaterialTheme.typography.headlineSmall)
+
+            SheetSection("Voice")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (name in Phonon.VOICES) {
+                    FilterChip(
+                        selected = voice == name,
+                        onClick = {
+                            if (name != voice) {
+                                voice = name
+                                app.settings.voice = name
+                                Commands.setVoice(controller, name)
+                            }
+                        },
+                        label = { Text(voiceName(name)) },
+                    )
+                }
+            }
+
+            SheetSection("Speed")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (step in SPEEDS) {
+                    FilterChip(
+                        selected = speed == step,
+                        onClick = {
+                            speed = step
+                            controller.setPlaybackSpeed(step)
+                        },
+                        label = { Text("${step}x") },
+                    )
+                }
+            }
 
             SheetSection("Sleep timer")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -229,4 +278,68 @@ internal fun SheetSection(name: String) {
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+}
+
+/** The reader's look, as the Display sheet edits it. */
+data class ReaderLook(val theme: ReaderTheme, val font: ReaderFont, val size: Float)
+
+/** Text size, font and theme for the reader. Changes show at once behind the sheet and are kept. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun DisplaySheet(look: ReaderLook, onChange: (ReaderLook) -> Unit, onDismiss: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = colors.surfaceContainer,
+        scrimColor = Color.Transparent, // the page behind shows each change as it is made
+    ) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp)) {
+            Text("Display", style = MaterialTheme.typography.headlineSmall)
+
+            SheetSection("Text size")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("A", style = MaterialTheme.typography.bodyMedium)
+                Slider(
+                    value = look.size,
+                    onValueChange = { onChange(look.copy(size = it.roundToInt().toFloat())) },
+                    valueRange = READER_SIZE_MIN..READER_SIZE_MAX,
+                    steps = (READER_SIZE_MAX - READER_SIZE_MIN).toInt() - 1,
+                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp).semantics { stateDescription = "${look.size.roundToInt()} point" },
+                )
+                Text("A", style = MaterialTheme.typography.headlineSmall)
+            }
+
+            SheetSection("Font")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (font in ReaderFont.entries) {
+                    FilterChip(
+                        selected = look.font == font,
+                        onClick = { onChange(look.copy(font = font)) },
+                        label = { Text(font.label, fontFamily = font.family) },
+                    )
+                }
+            }
+
+            SheetSection("Theme")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                for (theme in ReaderTheme.entries) {
+                    val chosen = look.theme == theme
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(64.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(theme.ground)
+                            .border(if (chosen) 3.dp else 1.dp, if (chosen) colors.primary else colors.outlineVariant, MaterialTheme.shapes.medium)
+                            .clickable(role = Role.RadioButton, onClickLabel = theme.label) { onChange(look.copy(theme = theme)) }
+                            .semantics { stateDescription = if (chosen) "${theme.label}, chosen" else theme.label },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Aa", color = theme.ink, style = MaterialTheme.typography.titleLarge, fontFamily = look.font.family)
+                    }
+                }
+            }
+        }
+    }
 }

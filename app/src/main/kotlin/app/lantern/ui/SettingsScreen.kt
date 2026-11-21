@@ -31,7 +31,7 @@ import app.lantern.playback.Commands
 import app.lantern.prepare.PreparedAudio
 import app.lantern.speech.Phonon
 
-private val SPEEDS = listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+internal val SPEEDS = listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

@@ -1,5 +1,6 @@
 package app.lantern.ui
 
+import android.app.Activity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.DragInteraction
@@ -31,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -65,9 +68,11 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import app.lantern.R
 import app.lantern.core.Position
 import app.lantern.core.Sentence
@@ -75,6 +80,7 @@ import app.lantern.lantern
 import app.lantern.library.Book
 import app.lantern.library.Chapter
 import app.lantern.playback.Commands
+import app.lantern.ui.theme.readerTextStyle
 import app.lantern.ui.theme.redButtonColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
@@ -142,6 +148,7 @@ fun ReaderContent(
     modifier: Modifier = Modifier,
     skipped: Set<Int> = emptySet(),
     onLongPress: (Int) -> Unit = {},
+    textStyle: TextStyle = TextStyle(fontSize = 18.sp, lineHeight = 27.sp),
 ) {
     val latestFollowChange by rememberUpdatedState(onFollowChange)
     val latestFirstVisible by rememberUpdatedState(onFirstVisible)
@@ -196,6 +203,7 @@ fun ReaderContent(
                     p,
                     highlighted = highlighted?.takeIf { it in p.sentences },
                     skipped = skipped,
+                    textStyle = textStyle,
                     onTap = onTap,
                     onLongPress = onLongPress,
                     onLayout = { layouts[row] = it },
@@ -215,6 +223,7 @@ private fun ParagraphRow(
     p: Paragraph,
     highlighted: Int?,
     skipped: Set<Int>,
+    textStyle: TextStyle,
     onTap: (Int) -> Unit,
     onLongPress: (Int) -> Unit,
     onLayout: (TextLayoutResult) -> Unit,
@@ -238,7 +247,7 @@ private fun ParagraphRow(
     val latestLongPress by rememberUpdatedState(onLongPress)
     Text(
         text,
-        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp, lineHeight = 27.sp),
+        style = MaterialTheme.typography.bodyLarge.merge(textStyle),
         color = colors.onSurface,
         onTextLayout = {
             layout = it
@@ -323,6 +332,8 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
     val chapters by remember(bookId) { library.chapters(bookId) }.collectAsState(initial = emptyList())
     val book by produceState<Book?>(null, bookId) { value = library.book(bookId) }
     var sheet by rememberSaveable { mutableStateOf(ReaderSheet.None) }
+    val settings = LocalContext.current.lantern.settings
+    var look by remember { mutableStateOf(ReaderLook(settings.readerTheme, settings.readerFont, settings.readerTextSize)) }
 
     var shown by rememberSaveable { mutableLongStateOf(chapterId) }
     var following by rememberSaveable { mutableStateOf(voice.chapterId == null || voice.chapterId == chapterId) }
@@ -444,106 +455,144 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
         val sentence = voice.sentence?.takeIf { voice.chapterId == state.chapterId } ?: readingAt
         if (state.sentences.size <= 1) 0f else sentence.toFloat() / state.sentences.lastIndex
     } ?: 0f
-    Page(
-        title = chapters.getOrNull(at)?.title.orEmpty(),
-        subtitle = book?.title,
-        nav = nav,
-        bottomBar = {
-            ReaderControls(
-                chapterNumber = at + 1,
-                through = through,
-                onPrevious = if (at > 0) ({ goTo(chapters[at - 1]) }) else null,
-                onNext = if (at in 0 until chapters.lastIndex) ({ goTo(chapters[at + 1]) }) else null,
-                speaking = speaking,
-                canPlay = controller != null,
-                onPlayPause = ::playPause,
-                onChapters = { sheet = ReaderSheet.Chapters },
-                onListen = { sheet = ReaderSheet.Listen },
-                listenLabel = sleepLabel(player.sleep) ?: "Listen",
-            )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (val state = load) {
-                Load.Loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Text("Getting the chapter…", Modifier.padding(top = 12.dp))
+    LightSystemBars(look.theme.light)
+    MaterialTheme(colorScheme = look.theme.scheme()) {
+        Page(
+            title = chapters.getOrNull(at)?.title.orEmpty(),
+            subtitle = book?.title,
+            nav = nav,
+            actions = {
+                IconButton(onClick = { sheet = ReaderSheet.Display }) {
+                    Icon(painterResource(R.drawable.ic_text_fields), contentDescription = "Display")
                 }
-                is Load.Failed -> Column(
-                    Modifier.align(Alignment.Center).padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text("Couldn't load this chapter: ${state.message}", color = MaterialTheme.colorScheme.error)
-                    Button(onClick = { attempt += 1 }, Modifier.padding(top = 12.dp), colors = redButtonColors()) { Text("Retry") }
-                }
-                is Load.Ready -> key(state) {
-                    ReaderContent(
-                        sentences = state.sentences,
-                        skipped = state.skipped,
-                        highlighted = voice.takeIf { it.chapterId == state.chapterId }?.sentence,
-                        // With no voice in this book there is nothing to be back to.
-                        following = following || voiceChapter == null,
-                        onTap = { index ->
-                            val at = Position(bookId, state.chapterId, index)
-                            voiceCheck.start({ at }) { Commands.playFrom(it, at, jump = true) }
-                            following = true
-                        },
-                        onFollowChange = { on ->
-                            following = on
-                            if (on) voiceChapter?.let { shown = it }
-                        },
-                        onFirstVisible = { index ->
-                            readingAt = index
-                            // While the voice is speaking, the service owns the position.
-                            if (!speaking) scope.launch { library.savePosition(Position(bookId, state.chapterId, index)) }
-                        },
-                        listState = state.listState,
-                        onLongPress = { index -> ruleFor = state.sentences[index].text },
-                    )
-                    ruleFor?.let { sentence ->
-                        RuleSheet(
-                            sentence = sentence,
+            },
+            bottomBar = {
+                ReaderControls(
+                    chapterNumber = at + 1,
+                    through = through,
+                    onPrevious = if (at > 0) ({ goTo(chapters[at - 1]) }) else null,
+                    onNext = if (at in 0 until chapters.lastIndex) ({ goTo(chapters[at + 1]) }) else null,
+                    speaking = speaking,
+                    canPlay = controller != null,
+                    onPlayPause = ::playPause,
+                    onChapters = { sheet = ReaderSheet.Chapters },
+                    onListen = { sheet = ReaderSheet.Listen },
+                    listenLabel = sleepLabel(player.sleep) ?: "Listen",
+                )
+            },
+        ) { padding ->
+            Box(Modifier.fillMaxSize().padding(padding)) {
+                when (val state = load) {
+                    Load.Loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Text("Getting the chapter…", Modifier.padding(top = 12.dp))
+                    }
+                    is Load.Failed -> Column(
+                        Modifier.align(Alignment.Center).padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Couldn't load this chapter: ${state.message}", color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { attempt += 1 }, Modifier.padding(top = 12.dp), colors = redButtonColors()) { Text("Retry") }
+                    }
+                    is Load.Ready -> key(state) {
+                        ReaderContent(
                             sentences = state.sentences,
-                            error = ruleError,
-                            saving = savingRule,
-                            onPreview = controller?.let { c -> { text: String -> Commands.preview(c, text) } },
-                            onSave = { saveRule(state, it) },
-                            onDismiss = { ruleFor = null },
+                            skipped = state.skipped,
+                            highlighted = voice.takeIf { it.chapterId == state.chapterId }?.sentence,
+                            // With no voice in this book there is nothing to be back to.
+                            following = following || voiceChapter == null,
+                            onTap = { index ->
+                                val at = Position(bookId, state.chapterId, index)
+                                voiceCheck.start({ at }) { Commands.playFrom(it, at, jump = true) }
+                                following = true
+                            },
+                            onFollowChange = { on ->
+                                following = on
+                                if (on) voiceChapter?.let { shown = it }
+                            },
+                            onFirstVisible = { index ->
+                                readingAt = index
+                                // While the voice is speaking, the service owns the position.
+                                if (!speaking) scope.launch { library.savePosition(Position(bookId, state.chapterId, index)) }
+                            },
+                            listState = state.listState,
+                            onLongPress = { index -> ruleFor = state.sentences[index].text },
+                            textStyle = readerTextStyle(look.font, look.size),
                         )
+                        ruleFor?.let { sentence ->
+                            RuleSheet(
+                                sentence = sentence,
+                                sentences = state.sentences,
+                                error = ruleError,
+                                saving = savingRule,
+                                onPreview = controller?.let { c -> { text: String -> Commands.preview(c, text) } },
+                                onSave = { saveRule(state, it) },
+                                onDismiss = { ruleFor = null },
+                            )
+                        }
                     }
                 }
             }
         }
-    }
 
-    when (sheet) {
-        ReaderSheet.None -> {}
-        ReaderSheet.Chapters -> ChaptersSheet(
-            bookId = bookId,
-            chapters = chapters,
-            current = shown,
-            onPick = { chapter ->
-                sheet = ReaderSheet.None
-                if (chapter.id != shown) goTo(chapter)
-            },
-            onDismiss = { sheet = ReaderSheet.None },
-        )
-        ReaderSheet.Listen -> controller?.let { c ->
-            ListenSheet(
-                controller = c,
-                sleep = player.sleep,
-                canUndo = history.isNotEmpty(),
-                onUndo = {
+        when (sheet) {
+            ReaderSheet.None -> {}
+            ReaderSheet.Chapters -> ChaptersSheet(
+                bookId = bookId,
+                chapters = chapters,
+                current = shown,
+                onPick = { chapter ->
                     sheet = ReaderSheet.None
-                    undo()
+                    if (chapter.id != shown) goTo(chapter)
                 },
                 onDismiss = { sheet = ReaderSheet.None },
             )
-        } ?: run { sheet = ReaderSheet.None }
+            ReaderSheet.Listen -> controller?.let { c ->
+                ListenSheet(
+                    controller = c,
+                    sleep = player.sleep,
+                    canUndo = history.isNotEmpty(),
+                    onUndo = {
+                        sheet = ReaderSheet.None
+                        undo()
+                    },
+                    onDismiss = { sheet = ReaderSheet.None },
+                )
+            } ?: run { sheet = ReaderSheet.None }
+            ReaderSheet.Display -> DisplaySheet(
+                look = look,
+                onChange = {
+                    look = it
+                    settings.readerTheme = it.theme
+                    settings.readerFont = it.font
+                    settings.readerTextSize = it.size
+                },
+                onDismiss = { sheet = ReaderSheet.None },
+            )
+        }
     }
 }
 
-private enum class ReaderSheet { None, Chapters, Listen }
+/**
+ * Dark status and navigation bar icons while [light] is true, for the reader's light themes; light icons again
+ * when the reader closes, since the rest of the app is dark.
+ */
+@Composable
+private fun LightSystemBars(light: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(light) {
+        val window = (view.context as? Activity)?.window
+        val bars = window?.let { WindowCompat.getInsetsController(it, view) }
+        bars?.isAppearanceLightStatusBars = light
+        bars?.isAppearanceLightNavigationBars = light
+        onDispose {
+            bars?.isAppearanceLightStatusBars = false
+            bars?.isAppearanceLightNavigationBars = false
+        }
+    }
+}
+
+private enum class ReaderSheet { None, Chapters, Listen, Display }
 
 /**
  * The reader's bottom bar (docs/decisions/ui-design.md): a strip with the chapter, how far through it you are and
