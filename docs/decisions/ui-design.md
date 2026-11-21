@@ -12,6 +12,7 @@ Decided with you in chat on 2026-11-21. Lantern's screens are redesigned after t
 - **Icons** are Material Symbols Rounded, copied in as Android vector drawables (Apache License 2.0), rather than an icon library.
 - **The home screen's play button plays the book without opening the reader.** Tapping the rest of the card opens the reader without starting playback. Before, Continue did both.
 - **The + button opens a sheet** with title search across the three sites and a Paste text row. Search results show each novel's cover with one button per site it is on. The separate Search screen is gone; Paste text keeps its own screen, since it needs room to type.
+- **Reader controls.** A strip with the chapter number, how far through the chapter you are (the sentence being read aloud, or where you are reading) and buttons to the chapters either side; under it Chapters, a large Play or Pause, and Listen. The chapters sheet groups chapters in blocks of 100, ticks the ones before your place, and marks chapters with audio ready in the current voice. Listen holds the sleep timer and Undo jump, which used to sit in the bar; while the timer is set, the Listen button shows the minutes left.
 - **Left out from the reference:** the daily reading goal, favourites (a database change), justified text and page mode (both need paragraphs, and Lantern stores one sentence per row).
 - **Play stays one tap away in the reader,** in the middle of the bottom bar. The reference hides it in its Listen sheet; Lantern is listened to more than read.
 

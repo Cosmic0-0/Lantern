@@ -1,5 +1,6 @@
 package app.lantern.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -19,11 +22,14 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +38,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -40,11 +47,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.selected
@@ -56,12 +68,15 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.lantern.R
 import app.lantern.core.Position
 import app.lantern.core.Sentence
 import app.lantern.lantern
+import app.lantern.library.Book
 import app.lantern.library.Chapter
 import app.lantern.playback.Commands
 import app.lantern.ui.theme.redButtonColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -306,6 +321,8 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
     val voice = player.state
     val scope = rememberCoroutineScope()
     val chapters by remember(bookId) { library.chapters(bookId) }.collectAsState(initial = emptyList())
+    val book by produceState<Book?>(null, bookId) { value = library.book(bookId) }
+    var sheet by rememberSaveable { mutableStateOf(ReaderSheet.None) }
 
     var shown by rememberSaveable { mutableLongStateOf(chapterId) }
     var following by rememberSaveable { mutableStateOf(voice.chapterId == null || voice.chapterId == chapterId) }
@@ -422,19 +439,27 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
     }
 
     val at = chapters.indexOfFirst { it.id == shown }
+    // How far through the shown chapter: the sentence being read aloud when the voice is in it, else where you are reading.
+    val through = (load as? Load.Ready)?.let { state ->
+        val sentence = voice.sentence?.takeIf { voice.chapterId == state.chapterId } ?: readingAt
+        if (state.sentences.size <= 1) 0f else sentence.toFloat() / state.sentences.lastIndex
+    } ?: 0f
     Page(
         title = chapters.getOrNull(at)?.title.orEmpty(),
+        subtitle = book?.title,
         nav = nav,
         bottomBar = {
             ReaderControls(
-                sleep = { controller?.let { SleepButton(player.sleep, it) } },
-                canUndo = history.isNotEmpty() && controller != null,
-                onUndo = ::undo,
+                chapterNumber = at + 1,
+                through = through,
+                onPrevious = if (at > 0) ({ goTo(chapters[at - 1]) }) else null,
+                onNext = if (at in 0 until chapters.lastIndex) ({ goTo(chapters[at + 1]) }) else null,
                 speaking = speaking,
                 canPlay = controller != null,
                 onPlayPause = ::playPause,
-                onPrevious = if (at > 0) ({ goTo(chapters[at - 1]) }) else null,
-                onNext = if (at in 0 until chapters.lastIndex) ({ goTo(chapters[at + 1]) }) else null,
+                onChapters = { sheet = ReaderSheet.Chapters },
+                onListen = { sheet = ReaderSheet.Listen },
+                listenLabel = sleepLabel(player.sleep) ?: "Listen",
             )
         },
     ) { padding ->
@@ -490,31 +515,128 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
             }
         }
     }
+
+    when (sheet) {
+        ReaderSheet.None -> {}
+        ReaderSheet.Chapters -> ChaptersSheet(
+            bookId = bookId,
+            chapters = chapters,
+            current = shown,
+            onPick = { chapter ->
+                sheet = ReaderSheet.None
+                if (chapter.id != shown) goTo(chapter)
+            },
+            onDismiss = { sheet = ReaderSheet.None },
+        )
+        ReaderSheet.Listen -> controller?.let { c ->
+            ListenSheet(
+                controller = c,
+                sleep = player.sleep,
+                canUndo = history.isNotEmpty(),
+                onUndo = {
+                    sheet = ReaderSheet.None
+                    undo()
+                },
+                onDismiss = { sheet = ReaderSheet.None },
+            )
+        } ?: run { sheet = ReaderSheet.None }
+    }
 }
 
+private enum class ReaderSheet { None, Chapters, Listen }
+
+/**
+ * The reader's bottom bar (docs/decisions/ui-design.md): a strip with the chapter, how far through it you are and
+ * buttons to the chapters either side, then Chapters, a large Play or Pause in the middle, and Listen.
+ */
 @Composable
 private fun ReaderControls(
-    sleep: @Composable () -> Unit,
-    canUndo: Boolean,
-    onUndo: () -> Unit,
+    chapterNumber: Int,
+    through: Float,
+    onPrevious: (() -> Unit)?,
+    onNext: (() -> Unit)?,
     speaking: Boolean,
     canPlay: Boolean,
     onPlayPause: () -> Unit,
-    onPrevious: (() -> Unit)?,
-    onNext: (() -> Unit)?,
+    onChapters: () -> Unit,
+    onListen: () -> Unit,
+    listenLabel: String,
 ) {
-    Surface(Modifier.fillMaxWidth(), tonalElevation = 3.dp) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                sleep()
-                if (canUndo) TextButton(onClick = onUndo) { Text("Undo jump") }
+    val colors = MaterialTheme.colorScheme
+    val percent = (through * 100).roundToInt()
+    Surface(Modifier.fillMaxWidth(), color = colors.surfaceContainer) {
+        Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp).padding(top = 4.dp, bottom = 8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { onPrevious?.invoke() }, enabled = onPrevious != null) {
+                    Icon(painterResource(R.drawable.ic_skip_previous), contentDescription = "Previous chapter")
+                }
+                Text("Ch. $chapterNumber", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                LinearProgressIndicator(
+                    progress = { through },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp)
+                        .height(4.dp)
+                        .semantics { contentDescription = "$percent percent through the chapter" },
+                    color = colors.primary,
+                    trackColor = colors.surfaceContainerHighest,
+                    strokeCap = StrokeCap.Round,
+                    gapSize = 0.dp,
+                    drawStopIndicator = {},
+                )
+                Text("$percent%", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                IconButton(onClick = { onNext?.invoke() }, enabled = onNext != null) {
+                    Icon(painterResource(R.drawable.ic_skip_next), contentDescription = "Next chapter")
+                }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { onPrevious?.invoke() }, enabled = onPrevious != null) { Text("‹ Chapter") }
-                Button(onClick = onPlayPause, enabled = canPlay, colors = redButtonColors()) { Text(if (speaking) "Pause" else "Play") }
-                OutlinedButton(onClick = { onNext?.invoke() }, enabled = onNext != null) { Text("Chapter ›") }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                BarButton(R.drawable.ic_format_list_bulleted, "Chapters", onChapters, Modifier.weight(1f))
+                FilledIconButton(
+                    onClick = onPlayPause,
+                    enabled = canPlay,
+                    modifier = Modifier.size(64.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer),
+                ) {
+                    Icon(
+                        painterResource(if (speaking) R.drawable.ic_pause else R.drawable.ic_play_arrow),
+                        contentDescription = if (speaking) "Pause" else "Play",
+                        modifier = Modifier.size(36.dp),
+                    )
+                }
+                BarButton(R.drawable.ic_headphones, listenLabel, onListen, Modifier.weight(1f))
             }
         }
+    }
+}
+
+/** An icon over a short label, the whole of it one touch target. */
+@Composable
+private fun BarButton(icon: Int, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(painterResource(icon), contentDescription = null)
+        Text(label, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+    }
+}
+
+/** What the Listen button says while the sleep timer is set: minutes left, or the end of the chapter. Null when off. */
+@Composable
+private fun sleepLabel(sleep: SleepState): String? {
+    val now by produceState(System.currentTimeMillis(), sleep.at) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(15_000)
+        }
+    }
+    return when {
+        sleep.at != null -> "Sleep ${((sleep.at - now).coerceAtLeast(0) + 59_999) / 60_000} min"
+        sleep.endOfChapter -> "Sleep: chapter"
+        else -> null
     }
 }
 

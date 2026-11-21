@@ -3,10 +3,13 @@ package app.lantern.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -19,7 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
+import app.lantern.R
 import app.lantern.lantern
 import app.lantern.library.Library
 import kotlinx.coroutines.flow.first
@@ -115,12 +120,13 @@ fun LanternRoot() {
     VoiceQuestion(voiceCheck)
 }
 
-/** A screen with a top bar and, unless [bottomBar] says otherwise, the mini player. */
+/** A screen with a top bar and, unless [bottomBar] says otherwise, the mini player. [subtitle] goes under the title. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Page(
     title: String,
     nav: Nav,
+    subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     snackbarHost: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = { MiniPlayer(nav) },
@@ -129,8 +135,23 @@ fun Page(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = { if (nav.canGoBack) TextButton(onClick = nav::back) { Text("Back") } },
+                title = {
+                    Column {
+                        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (subtitle != null) {
+                            Text(
+                                subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                },
+                navigationIcon = {
+                    if (nav.canGoBack) IconButton(onClick = nav::back) { Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "Back") }
+                },
                 actions = actions,
             )
         },
