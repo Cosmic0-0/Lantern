@@ -41,7 +41,7 @@ The plan, reference review, site tests and phone voice tests are done. You appro
     - [ ] **A day of normal use** with paragraphs in the reader.
 
     Then I write `docs/phase-3-results.md` with the checks you ran, update the README (`update-readme`), and set this list up for Phase 4.
-22. **Prepared audio, built 2026-11-21** on branch `prepare-audio`, after the battery drain on your 2026-11-20 bus trip. You prepare chapters from the book screen, read-ahead while listening is now 5 chapters, and audio is kept until you pass it. `tools/prepare-laptop.py` makes audio on the laptop and pushes it to the phone. See [Prepared audio](docs/decisions/prepared-audio.md). Still to check: the overnight run's result, and a full day out on battery.
+22. **Prepared audio, built 2026-11-21** on branch `prepare-audio`, after the battery drain on your 2026-11-20 bus trip. You prepare chapters from the book screen, read-ahead while listening is now 5 chapters, and audio is kept until you pass it. `tools/prepare-laptop.py` makes audio on the laptop and pushes it to the phone. See [Prepared audio](docs/decisions/prepared-audio.md). All 98 chapters of Ode of the Brave from your position were prepared on 2026-11-21. Still to check: why preparing on battery runs about 10 times slower, and a full day out on battery.
 23. Then plan Phase 4, more sources: see the [roadmap](#roadmap).
 
 **Current setup:**

@@ -18,6 +18,8 @@ The MVP does these things:
 
 The reader shows one sentence per row, because paragraph breaks aren't stored yet.
 
+Since then, Lantern can prepare audio ahead of time, so listening uses less battery. You prepare chapters from the book screen, playback makes up to 5 chapters ahead, and prepared audio is kept until you pass it. `tools/prepare-laptop.py` makes a book's audio on the laptop and copies it to the phone. See [prepared audio](docs/decisions/prepared-audio.md).
+
 ## Stack
 
 - **App.** Native Kotlin, Jetpack Compose, Room and Media3, in three modules: `app`, `core` and `sources`. See [app type](docs/decisions/app-type.md) and [module structure](docs/decisions/module-structure.md).
