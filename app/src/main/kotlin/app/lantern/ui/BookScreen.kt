@@ -45,6 +45,7 @@ import app.lantern.playback.Commands
 import app.lantern.prepare.Prepare
 import app.lantern.prepare.PrepareState
 import app.lantern.prepare.PreparedAudio.BookAudio
+import app.lantern.speech.Phonon
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,6 +59,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
     val context = LocalContext.current
     val library = context.lantern.library
     val controller = LocalPlayer.current.controller
+    val voiceCheck = LocalVoiceCheck.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val book by produceState<Book?>(null, bookId) { value = library.book(bookId) }
@@ -69,6 +71,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
     val prepareState by remember(context) { Prepare.state(context) }.collectAsState(initial = null)
     val preparing = prepareState?.takeIf { it.bookId == bookId }
     var audio by remember(bookId) { mutableStateOf(BookAudio(emptySet(), 0)) }
+    var otherVoices by remember(bookId) { mutableStateOf(emptyMap<String, BookAudio>()) } // kept when the voice changes
     var choosing by remember { mutableStateOf(false) }
     // Chapters from where you are to the end: what "rest of book" means.
     val remaining = chapters.size - chapters.indexOfFirst { it.id == position?.chapterId }.coerceAtLeast(0)
@@ -77,6 +80,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
     LaunchedEffect(bookId, preparing) {
         val prepared = context.lantern.prepared
         val voice = context.lantern.settings.voice
+        otherVoices = Phonon.VOICES.filter { it != voice }.associateWith { prepared.book(bookId, it) }.filterValues { it.ready.isNotEmpty() }
         while (true) {
             audio = prepared.book(bookId, voice)
             if (preparing == null) break
@@ -131,7 +135,7 @@ fun BookScreen(nav: Nav, bookId: Long) {
                         Text("${sourceName(book?.sourceId)} · ${chaptersText(chapters.size)}", style = MaterialTheme.typography.bodyMedium)
                         Button(
                             onClick = {
-                                controller?.let { Commands.continueBook(it, bookId) }
+                                voiceCheck.start({ library.startOf(bookId) }) { Commands.continueBook(it, bookId) }
                                 scope.launch { nav.openReader(library, bookId) }
                             },
                             enabled = controller != null && chapters.isNotEmpty(),
@@ -147,6 +151,13 @@ fun BookScreen(nav: Nav, bookId: Long) {
                                 Text(
                                     "${chaptersText(audio.ready.size)} ready · ${formatSize(audio.bytes)}",
                                     Modifier.padding(top = 12.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                            for ((other, made) in otherVoices) {
+                                Text(
+                                    "Also ready in ${voiceName(other)}: ${chaptersText(made.ready.size)} · ${formatSize(made.bytes)}",
+                                    Modifier.padding(top = 4.dp),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                             }

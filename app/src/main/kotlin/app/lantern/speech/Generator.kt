@@ -48,8 +48,8 @@ class Generator(
     /** [chapterId] is -1 for a phrase. [key] is where its audio goes: the chapter's audio key, or the phrase key. */
     private class Job(val chapterId: Long, val index: Int, val key: String, val text: String)
 
-    /** What decides which audio is kept. When any of it changes, old audio may need deleting. */
-    private data class Keep(val voice: String, val chapterId: Long, val phrases: List<String>, val rulesVersion: Int)
+    /** What decides which audio is kept. When any of it changes, old audio may need deleting. The voice doesn't: audio in every voice is kept. */
+    private data class Keep(val chapterId: Long, val phrases: List<String>, val rulesVersion: Int)
 
     private val wake = Semaphore(0) // a permit means "look again"; permits pile up, so no wake-up is lost
 
@@ -81,7 +81,7 @@ class Generator(
         wake.release()
     }
 
-    /** Speaks in [name] from the next sentence made. Audio in other voices is deleted. */
+    /** Speaks in [name] from the next sentence made. Audio in other voices is kept until its chapter is passed. */
     fun setVoice(name: String) {
         require(name in Phonon.VOICES) { "unknown voice $name" }
         voice = name
@@ -181,7 +181,7 @@ class Generator(
         val window = library.chaptersFrom(current.id, 1 + reach).takeWhile { it.textHash != null }
         val chapters = window.associate { it.id to speechOf(it, rules) }
         speech.keys.retainAll(chapters.keys)
-        wantKept = Keep(v, current.id, wanted.map(::phraseKey), rulesVersion)
+        wantKept = Keep(current.id, wanted.map(::phraseKey), rulesVersion)
 
         val plans = window.map { ChapterPlan(it.id, chapters.getValue(it.id).sentences.size) }
         val (chapterId, index) = ReadAhead.next(p, plans) { c, i ->
@@ -212,7 +212,7 @@ class Generator(
         speech.getOrPut(chapter.id) { library.speech(chapter.id, rules) }
 
     /**
-     * Deletes audio in other voices, phrases no longer used, and chapters behind their book's position, when what
+     * Deletes, in every voice, phrases no longer used and chapters behind their book's position, when what
      * decides that has changed. Under the lock, so the keys are read after any write in progress has finished.
      */
     private fun cleanUpIfNeeded() {
@@ -220,9 +220,9 @@ class Generator(
         if (want == kept) return
         SpeechWork.lock.withLock {
             val keys = runBlocking { library.audioKeysAhead() }
-            audio.keepOnly(want.voice, keys + want.phrases)
+            audio.keepOnly(keys + want.phrases)
         }
-        ready.keys.retainAll(audio.chapterKeys(want.voice))
+        readyVoice?.let { ready.keys.retainAll(audio.chapterKeys(it)) }
         kept = want
     }
 

@@ -66,13 +66,9 @@ class SentenceAudio(private val root: File) {
         return samples
     }
 
-    /** Deletes every voice folder except [voice], and inside it every chapter folder whose hash isn't in [keep]. */
-    fun keepOnly(voice: String, keep: Set<String>) {
+    /** In every voice, deletes each chapter or phrase folder whose key isn't in [keep]. Other voices are kept too. */
+    fun keepOnly(keep: Set<String>) {
         for (voiceDir in root.listFiles { f -> f.isDirectory }.orEmpty()) {
-            if (voiceDir.name != voice) {
-                voiceDir.deleteRecursively()
-                continue
-            }
             for (chapterDir in voiceDir.listFiles { f -> f.isDirectory }.orEmpty()) {
                 if (chapterDir.name !in keep) chapterDir.deleteRecursively()
             }

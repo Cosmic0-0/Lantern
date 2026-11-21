@@ -39,6 +39,7 @@ fun LibraryScreen(nav: Nav) {
     val library = LocalContext.current.lantern.library
     val player = LocalPlayer.current
     val controller = player.controller
+    val voiceCheck = LocalVoiceCheck.current
     val scope = rememberCoroutineScope()
     val books by remember { library.books() }.collectAsState(initial = null)
     var deleting by remember { mutableStateOf<Book?>(null) }
@@ -64,7 +65,7 @@ fun LibraryScreen(nav: Nav) {
                     if (last != null) item {
                         Button(
                             onClick = {
-                                controller?.let { Commands.continueBook(it, null) }
+                                voiceCheck.start({ library.lastPlayed() }) { Commands.continueBook(it, null) }
                                 scope.launch { nav.openReader(library, last.id) }
                             },
                             enabled = controller != null,

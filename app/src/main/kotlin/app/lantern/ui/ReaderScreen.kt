@@ -301,6 +301,7 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
     val library = LocalContext.current.lantern.library
     val player = LocalPlayer.current
     val controller = player.controller
+    val voiceCheck = LocalVoiceCheck.current
     val voice = player.state
     val scope = rememberCoroutineScope()
     val chapters by remember(bookId) { library.chapters(bookId) }.collectAsState(initial = emptyList())
@@ -387,7 +388,9 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
             // (docs/decisions/position-tracking.md), recorded as a jump so Undo goes back to the voice.
             voiceChapter == shown && following -> c.play()
             else -> {
-                Commands.playFrom(c, Position(bookId, shown, readingAt), jump = voiceChapter != null)
+                val at = Position(bookId, shown, readingAt)
+                val jump = voiceChapter != null
+                voiceCheck.start({ at }) { Commands.playFrom(it, at, jump) }
                 following = true
             }
         }
@@ -395,7 +398,8 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
 
     fun goTo(target: Chapter) {
         if (speaking) {
-            controller?.let { Commands.playFrom(it, Position(bookId, target.id, 0), jump = true) }
+            val at = Position(bookId, target.id, 0)
+            voiceCheck.start({ at }) { Commands.playFrom(it, at, jump = true) }
             following = true
         } else {
             // Continue from the library should start here next time.
@@ -454,7 +458,8 @@ fun ReaderScreen(nav: Nav, bookId: Long, chapterId: Long) {
                         // With no voice in this book there is nothing to be back to.
                         following = following || voiceChapter == null,
                         onTap = { index ->
-                            controller?.let { Commands.playFrom(it, Position(bookId, state.chapterId, index), jump = true) }
+                            val at = Position(bookId, state.chapterId, index)
+                            voiceCheck.start({ at }) { Commands.playFrom(it, at, jump = true) }
                             following = true
                         },
                         onFollowChange = { on ->

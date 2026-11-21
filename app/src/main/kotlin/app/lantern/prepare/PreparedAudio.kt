@@ -1,11 +1,13 @@
 package app.lantern.prepare
 
+import app.lantern.core.Position
 import app.lantern.library.Library
+import app.lantern.speech.Phonon
 import app.lantern.speech.SentenceAudio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** What audio is already made, for the book screen and the voice warning. Reads files and the database only. */
+/** What audio is already made, for the book screen, the settings screen and the voice question. Reads files and the database only. */
 class PreparedAudio(private val library: Library, private val audio: SentenceAudio) {
     /** [ready]: chapters from the book's position on whose every unskipped sentence has audio. [bytes]: their audio and any partly made. */
     data class BookAudio(val ready: Set<Long>, val bytes: Long)
@@ -33,5 +35,19 @@ class PreparedAudio(private val library: Library, private val audio: SentenceAud
     suspend fun voice(voice: String): VoiceAudio = withContext(Dispatchers.IO) {
         val keys = audio.chapterKeys(voice)
         VoiceAudio(keys.size, keys.sumOf { audio.bytes(voice, it) })
+    }
+
+    /**
+     * Another voice with [position]'s chapter made from its sentence to the end, when [voice] doesn't have it. Null
+     * otherwise, so playback can just start (docs/decisions/prepared-audio.md).
+     */
+    suspend fun preparedIn(position: Position, voice: String): String? = withContext(Dispatchers.IO) {
+        val chapter = library.chapter(position.chapterId)?.takeIf { it.textHash != null } ?: return@withContext null
+        val speech = library.speech(chapter.id, library.rules(chapter.bookId))
+        fun complete(v: String): Boolean {
+            val made = audio.ready(v, speech.key)
+            return (position.sentence until speech.sentences.size).all { it in speech.skipped || it in made }
+        }
+        if (complete(voice)) null else Phonon.VOICES.firstOrNull { it != voice && complete(it) }
     }
 }

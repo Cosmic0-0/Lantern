@@ -113,26 +113,27 @@ class SentenceAudioTest {
     }
 
     @Test
-    fun `keepOnly keeps the voice and the listed chapters and deletes the rest`() {
+    fun `keepOnly keeps the listed chapters in every voice and deletes the rest`() {
         val a = audio
         for (voice in listOf("everly", "trevor")) {
             for (hash in listOf("h1", "h2", "h3")) a.write(voice, hash, 0) { it.write(FloatArray(10)) }
         }
-        a.keepOnly("everly", setOf("h1", "h3"))
-        assertTrue(a.isReady("everly", "h1", 0))
-        assertFalse(a.isReady("everly", "h2", 0))
-        assertFalse(File(root, "everly/h2").exists())
-        assertTrue(a.isReady("everly", "h3", 0))
-        assertFalse(File(root, "trevor").exists())
+        a.keepOnly(setOf("h1", "h3"))
+        for (voice in listOf("everly", "trevor")) {
+            assertTrue(a.isReady(voice, "h1", 0))
+            assertFalse(a.isReady(voice, "h2", 0))
+            assertFalse(File(root, "$voice/h2").exists())
+            assertTrue(a.isReady(voice, "h3", 0))
+        }
     }
 
     @Test
     fun `keepOnly with nothing to keep empties the voice but keeps its folder, and a missing root is fine`() {
-        SentenceAudio(File(tmp.root, "never-created")).keepOnly("everly", setOf("h1"))
+        SentenceAudio(File(tmp.root, "never-created")).keepOnly(setOf("h1"))
 
         val a = audio
         a.write("everly", "h1", 0) { it.write(FloatArray(10)) }
-        a.keepOnly("everly", emptySet())
+        a.keepOnly(emptySet())
         assertFalse(a.isReady("everly", "h1", 0))
         assertTrue(File(root, "everly").isDirectory)
     }

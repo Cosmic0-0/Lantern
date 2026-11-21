@@ -9,14 +9,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import app.lantern.lantern
 import app.lantern.library.Library
 import kotlinx.coroutines.flow.first
 
@@ -92,19 +96,27 @@ fun LanternRoot() {
         ),
     ) { mutableStateListOf<Screen>(Screen.Library) }
     val nav = remember(stack) { Nav(stack) }
+    // Lives as long as the activity, so a question asked as one screen opens another still gets its answer.
+    val app = LocalContext.current.lantern
+    val player = LocalPlayer.current
+    val scope = rememberCoroutineScope()
+    val voiceCheck = remember(app, player, scope) { VoiceCheck(app, player, scope) }
     BackHandler(enabled = nav.canGoBack) { nav.back() }
-    key(nav.current) {
-        when (val screen = nav.current) {
-            Screen.Library -> LibraryScreen(nav)
-            Screen.Search -> SearchScreen(nav)
-            is Screen.Book -> BookScreen(nav, screen.bookId)
-            is Screen.Reader -> ReaderScreen(nav, screen.bookId, screen.chapterId)
-            Screen.Settings -> SettingsScreen(nav)
-            Screen.Paste -> PasteScreen(nav)
-            is Screen.SwitchSource -> SwitchSourceScreen(nav, screen.bookId)
-            is Screen.Rules -> RulesScreen(nav, screen.bookId)
+    CompositionLocalProvider(LocalVoiceCheck provides voiceCheck) {
+        key(nav.current) {
+            when (val screen = nav.current) {
+                Screen.Library -> LibraryScreen(nav)
+                Screen.Search -> SearchScreen(nav)
+                is Screen.Book -> BookScreen(nav, screen.bookId)
+                is Screen.Reader -> ReaderScreen(nav, screen.bookId, screen.chapterId)
+                Screen.Settings -> SettingsScreen(nav)
+                Screen.Paste -> PasteScreen(nav)
+                is Screen.SwitchSource -> SwitchSourceScreen(nav, screen.bookId)
+                is Screen.Rules -> RulesScreen(nav, screen.bookId)
+            }
         }
     }
+    VoiceQuestion(voiceCheck)
 }
 
 /** A screen with a top bar and, unless [bottomBar] says otherwise, the mini player. */
