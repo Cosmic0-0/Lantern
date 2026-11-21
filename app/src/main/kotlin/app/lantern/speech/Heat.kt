@@ -10,8 +10,8 @@ import app.lantern.core.HeatGuard
 
 /**
  * Whether the phone is too hot to make audio freely, shared by the playback generator and the prepare job
- * (docs/decisions/prepared-audio.md). Reads Android's thermal status each time it is asked; on Android 9, which has
- * none, the phone is never hot.
+ * (docs/decisions/prepared-audio.md). Reads Android's thermal status and the battery temperature each time it is
+ * asked; see [HeatGuard]. Android 9 has no thermal status, so there only the battery check applies.
  */
 class Heat(context: Context) {
     private val app = context.applicationContext
@@ -19,12 +19,12 @@ class Heat(context: Context) {
     private val guard = HeatGuard()
 
     @Synchronized
-    fun isHot(): Boolean = guard.update(status())
+    fun isHot(): Boolean = guard.update(status(), batteryCelsius())
 
     /** Android's thermal status (0 none, 1 light, 2 moderate, 3 severe...), or null before Android 10. */
     fun status(): Int? = if (Build.VERSION.SDK_INT >= 29) power.currentThermalStatus else null
 
-    /** For the logs only: the battery temperature in °C, or null. */
+    /** The battery temperature in °C, or null: a backup check in [HeatGuard], and for the logs. */
     fun batteryCelsius(): Float? {
         val battery = app.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return null
         val tenths = battery.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
