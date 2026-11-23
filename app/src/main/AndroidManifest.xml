@@ -11,6 +11,7 @@
     <application
         android:name=".LanternApp"
         android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
         android:label="Lantern"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">

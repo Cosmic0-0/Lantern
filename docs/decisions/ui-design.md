@@ -26,3 +26,13 @@ Each step is its own commit, so any one can be reverted.
 3. Add sheet: the + button opens title search and Paste text.
 4. Reader controls: bottom bar, chapter progress strip, chapters sheet.
 5. Display and Listen sheets: font size, font and reader theme; voice, speed, sleep timer and Undo jump.
+
+## App icon
+
+Decided with you in chat on 2026-11-23, after several rounds of drawn options compared on a page and then on the phone.
+
+- **The mark:** Rush Red sound bars rising off an ivory open book, like a flame: a voice reading the book aloud. Listening comes first in Lantern, so the light is a voice. The bars lean like a flame instead of peaking in the middle.
+- **Colours:** the app's own dark theme. The background is Ink Black #20201E, the card colour, rather than a red tile, so tapping the icon leads straight into a matching dark app.
+- **Runner-up:** a Rush Red flame with an ivory sound wave in it. You chose the book in the end, after seeing both on the A26.
+- **Built as** an Android adaptive icon (`res/mipmap-anydpi-v26/ic_launcher.xml`): the colour background, a vector foreground and a single-colour layer for Android 13+ themed icons. No PNGs, since minSdk is 28. The shape is drawn at 90% and raised 3 units, because Samsung's launcher crops tighter than the 66dp safe zone and the tallest bar nearly touched the edge at full size.
+- **Watch:** the icon sits close to the reference app Light Novel's white open book. The red bars and dark card colour keep it distinct; the notification icon is still Android's stock download arrow.
